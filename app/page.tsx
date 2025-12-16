@@ -133,6 +133,7 @@ export default function Home() {
   const [isEditingFocus, setIsEditingFocus] = useState(false);
   const [recentYears, setRecentYears] = useState<string>("10");
   const [view, setView] = useState<ViewMode>("life");
+  const [isHydrated, setIsHydrated] = useState(false);
   const [monthEntries, setMonthEntries] = useState<Record<string, string>>({});
   const [selectedMonth, setSelectedMonth] = useState<{
     year: number;
@@ -229,13 +230,15 @@ export default function Home() {
           setProductivityGoals(parsedGoals);
         }
       }
-      const storedView =
-        window.localStorage.getItem("timespent-active-view");
+
+      const storedView = window.localStorage.getItem("timespent-active-view");
       if (storedView === "life" || storedView === "time-spent" || storedView === "productivity") {
         setView(storedView);
       }
+      setIsHydrated(true);
     } catch (error) {
       console.error("Failed to load settings from cache", error);
+      setIsHydrated(true);
     }
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -254,6 +257,14 @@ export default function Home() {
       console.error("Failed to cache profile", error);
     }
   }, [personName, dateOfBirth, email]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("timespent-active-view", view);
+    } catch (error) {
+      console.error("Failed to cache active view", error);
+    }
+  }, [view]);
 
   useEffect(() => {
     try {
@@ -400,6 +411,14 @@ export default function Home() {
     });
   }, [selectedMonth, dateOfBirth]);
 
+  const parsedRecentYears = useMemo(() => {
+    const parsed = Number.parseInt(recentYears, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return 0;
+    }
+    return Math.min(parsed, 90);
+  }, [recentYears]);
+
   const selectedMonthAge = useMemo(() => {
     if (!selectedMonth || !dateOfBirth) {
       return null;
@@ -440,6 +459,10 @@ export default function Home() {
       return updated;
     });
   };
+
+  if (!isHydrated) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--background)] text-[var(--foreground)] transition-colors">
@@ -619,16 +642,58 @@ export default function Home() {
                 years of my life
               </p>
 
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-base">
-                {focusAreas.map((area) => (
-                  <button
-                    key={area.id}
-                    type="button"
-                    className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-5 py-2 text-sm uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-[var(--foreground)]"
-                  >
-                    {area.name}
-                  </button>
-                ))}
+              <div className="mt-10 grid grid-cols-2 gap-3 text-base sm:flex sm:flex-wrap sm:items-center sm:justify-center">
+                {parsedRecentYears > 0 && focusAreas.length > 0 && (() => {
+                  const parsedAreas = focusAreas
+                    .map((area, index) => ({
+                      ...area,
+                      hoursPerDay: Math.max(Number.parseFloat(area.hours) || 0, 0),
+                      color: WEEK_COLORS[index % WEEK_COLORS.length]!,
+                    }))
+                    .filter((area) => area.hoursPerDay > 0);
+
+                  const totalHoursPerDay = parsedAreas.reduce(
+                    (sum, area) => sum + area.hoursPerDay,
+                    0
+                  );
+
+                  return parsedAreas
+                    .sort((a, b) => b.hoursPerDay - a.hoursPerDay)
+                    .map((area) => {
+                    const share = area.hoursPerDay / totalHoursPerDay;
+                    const totalDaysPeriod = parsedRecentYears * 365;
+                    const totalDaysInvested = share * totalDaysPeriod;
+                    const months = totalDaysInvested / 30;
+                    const yearsSpent = totalDaysInvested / 365;
+                    const percent = share * 100;
+
+                    let durationLabel: string;
+                    if (yearsSpent >= 1) {
+                      durationLabel = `${yearsSpent.toFixed(1)} years`;
+                    } else if (months >= 1) {
+                      durationLabel = `${months.toFixed(1)} months`;
+                    } else {
+                      durationLabel = `${totalDaysInvested.toFixed(0)} days`;
+                    }
+
+                    return (
+                      <div
+                        key={area.id}
+                        className="rounded-full border px-5 py-2 text-sm transition text-center"
+                        style={{
+                          borderColor: area.color,
+                          color: area.color,
+                          fontFamily: "'Lato', 'Helvetica Neue', Arial, sans-serif",
+                        }}
+                      >
+                        <div className="font-semibold">{area.name}</div>
+                        <div className="text-xs mt-0.5 font-medium">
+                          {durationLabel} • {percent.toFixed(1)}%
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
                 <button
                   type="button"
                   onClick={toggleFocusEditor}
@@ -645,13 +710,31 @@ export default function Home() {
                     <p className="text-sm uppercase tracking-[0.25em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
                       Daily breakdown
                     </p>
-                    <button
-                      type="button"
-                      onClick={addFocusArea}
-                      className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-3 py-1 text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
-                    >
-                      + Add pill
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const totalHours = focusAreas.reduce((sum, area) => sum + (Number.parseFloat(area.hours) || 0), 0);
+                        const isOver24 = totalHours > 24;
+                        const isExactly24 = totalHours === 24;
+                        return (
+                          <p
+                            className="text-xs font-medium transition-colors"
+                            style={{
+                              fontFamily: "'Lato', 'Helvetica Neue', Arial, sans-serif",
+                              color: isOver24 ? '#ef4444' : isExactly24 ? '#10b981' : 'color-mix(in srgb, var(--foreground) 50%, transparent)'
+                            }}
+                          >
+                            Total: {Math.round(totalHours)} hours {isExactly24 && '✓'}
+                          </p>
+                        );
+                      })()}
+                      <button
+                        type="button"
+                        onClick={addFocusArea}
+                        className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-3 py-1 text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
+                      >
+                        + Add pill
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     {focusAreas.map((area) => (
@@ -687,6 +770,13 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
+              )}
+
+              {parsedRecentYears > 0 && (
+                <WeeklyAllocationGrid
+                  years={parsedRecentYears}
+                  focusAreas={focusAreas}
+                />
               )}
             </section>
           )}
@@ -930,6 +1020,155 @@ const YearRow = ({
 
 type ProductivityLegendProps = {
   className?: string;
+};
+
+type WeeklyAllocationGridProps = {
+  years: number;
+  focusAreas: FocusArea[];
+};
+
+const WEEK_COLORS = [
+  "#8E7DBE",
+  "#F29E4C",
+  "#F25C54",
+  "#5DA9E9",
+  "#80CFA9",
+  "#F7B267",
+  "#B8F2E6",
+  "#C8553D",
+];
+
+const WeeklyAllocationGrid = ({
+  years,
+  focusAreas,
+}: WeeklyAllocationGridProps) => {
+  const isDailyView = years <= 2;
+  const totalUnits = Math.max(1, isDailyView ? years * 365 : years * 52);
+  const parsedAreas = focusAreas
+    .map((area, index) => ({
+      ...area,
+      hoursPerDay: Math.max(Number.parseFloat(area.hours) || 0, 0),
+      color: WEEK_COLORS[index % WEEK_COLORS.length]!,
+    }))
+    .filter((area) => area.hoursPerDay > 0);
+
+  const totalHoursPerDay = parsedAreas.reduce(
+    (sum, area) => sum + area.hoursPerDay,
+    0
+  );
+
+  if (parsedAreas.length === 0 || totalHoursPerDay === 0) {
+    return null;
+  }
+
+  const allocations = parsedAreas.map((area) => {
+    const share = area.hoursPerDay / totalHoursPerDay;
+    const proportionalUnits = share * totalUnits;
+    const wholeUnits = Math.floor(proportionalUnits);
+    const remainder = proportionalUnits - wholeUnits;
+    return {
+      ...area,
+      share,
+      proportionalUnits,
+      unitsInt: wholeUnits,
+      remainder,
+    };
+  });
+
+  const assigned = allocations.reduce((sum, area) => sum + area.unitsInt, 0);
+  let remaining = totalUnits - assigned;
+  if (remaining > 0) {
+    const sorted = [...allocations].sort(
+      (a, b) => b.remainder - a.remainder
+    );
+    let idx = 0;
+    while (remaining > 0 && sorted.length > 0) {
+      sorted[idx % sorted.length]!.unitsInt += 1;
+      remaining -= 1;
+      idx += 1;
+    }
+  }
+
+  const columnsDesktop = isDailyView ? 30 : 26;
+  const columnsMobile = isDailyView ? 17 : 15;
+
+  const cells: { color: string; label: string; tooltip: string }[] = [];
+
+  // Add unallocated cells
+  const allocatedCount = allocations.reduce((sum, area) => sum + area.unitsInt, 0);
+  const unallocatedCount = totalUnits - allocatedCount;
+  for (let i = 0; i < unallocatedCount; i += 1) {
+    cells.push({
+      color: "transparent",
+      label: "Unallocated",
+      tooltip: "Unallocated time",
+    });
+  }
+
+  // Add allocated cells sorted from least to most time spent
+  const sortedAllocations = [...allocations].sort((a, b) => a.unitsInt - b.unitsInt);
+  sortedAllocations.forEach((area) => {
+    const percent = area.share * 100;
+    const totalDaysPeriod = years * 365;
+    const totalDaysInvested = area.share * totalDaysPeriod;
+    const months = totalDaysInvested / 30;
+    const yearsSpent = totalDaysInvested / 365;
+
+    let durationLabel: string;
+    if (yearsSpent >= 1) {
+      durationLabel = `${yearsSpent.toFixed(1)} years`;
+    } else if (months >= 1) {
+      durationLabel = `${months.toFixed(1)} months`;
+    } else {
+      durationLabel = `${totalDaysInvested.toFixed(0)} days`;
+    }
+
+    const tooltip = `${area.name}: ${durationLabel} (${percent.toFixed(1)}%)`;
+
+    for (let i = 0; i < area.unitsInt; i += 1) {
+      cells.push({ color: area.color, label: area.name, tooltip });
+    }
+  });
+
+  const totalUnitsLabel = isDailyView
+    ? `${totalUnits} days`
+    : `${totalUnits} weeks`;
+
+  return (
+    <div className="mx-auto mt-12 w-full max-w-5xl text-left px-4">
+      <div className="mb-6 text-center">
+        <p className="text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]" style={{ fontFamily: "'Lato', 'Helvetica Neue', Arial, sans-serif" }}>
+          {years} year{years > 1 ? "s" : ""} • {totalUnitsLabel}
+        </p>
+      </div>
+      <div className="flex justify-center">
+        <div className="rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-4 w-full max-w-fit">
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              .time-allocation-grid {
+                grid-template-columns: repeat(${columnsMobile}, minmax(18px, 1fr));
+              }
+              @media (min-width: 640px) {
+                .time-allocation-grid {
+                  grid-template-columns: repeat(${columnsDesktop}, minmax(18px, 1fr));
+                }
+              }
+            `
+          }} />
+          <div className="time-allocation-grid grid gap-1">
+            {cells.map((cell, idx) => (
+              <div
+                key={`week-cell-${idx}-${cell.label}`}
+                className="aspect-square rounded-[2px] border border-[color-mix(in_srgb,var(--foreground)_10%,transparent)] hover:scale-110 hover:z-10 transition-transform cursor-pointer"
+                style={{ backgroundColor: cell.color }}
+                title={cell.tooltip}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const ProductivityLegend = ({ className }: ProductivityLegendProps = {}) => (
