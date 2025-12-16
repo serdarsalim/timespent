@@ -77,7 +77,7 @@ const defaultFocusAreas: FocusArea[] = [
   { id: "work", name: "Work", hours: "8" },
 ];
 
-type ViewMode = "life" | "time-spent" | "productivity" | "goals";
+type ViewMode = "life" | "productivity" | "goals";
 
 type KeyResultStatus = "started" | "pending" | "on-hold" | "completed";
 
@@ -377,7 +377,7 @@ export default function Home() {
       }
 
       const storedView = window.localStorage.getItem("timespent-active-view");
-      if (storedView === "life" || storedView === "time-spent" || storedView === "productivity") {
+      if (storedView === "life" || storedView === "productivity" || storedView === "goals") {
         setView(storedView);
       }
 
@@ -1155,17 +1155,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
           </button>
           <button
             type="button"
-            onClick={() => setView("time-spent")}
-            className={`rounded-full px-4 py-1 transition ${
-              view === "time-spent"
-                ? "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-[var(--foreground)]"
-                : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
-            }`}
-          >
-            Time
-          </button>
-          <button
-            type="button"
             onClick={() => setView("goals")}
             className={`rounded-full px-4 py-1 transition ${
               view === "goals"
@@ -1213,163 +1202,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 setScheduleEntries={setScheduleEntries}
                 weekStartDay={weekStartDay}
               />
-            </section>
-          )}
-
-          {view === "time-spent" && (
-            <section className="mt-12">
-              <p className="text-3xl font-light leading-tight sm:text-4xl">
-                Where time goes over{" "}
-                <input
-                  type="number"
-                  min="1"
-                  max="90"
-                  value={recentYears}
-                  onChange={(event) =>
-                    setRecentYears(event.target.value.replace(/[^0-9]/g, ""))
-                  }
-                  className="mx-3 w-24 border-b border-[color-mix(in_srgb,var(--foreground)_60%,transparent)] bg-transparent text-center text-4xl font-semibold text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
-                  aria-label="Enter the number of years to analyze"
-                />{" "}
-                years
-              </p>
-
-              <div className="mt-10 grid grid-cols-2 gap-3 text-base sm:flex sm:flex-wrap sm:items-center sm:justify-center">
-                {parsedRecentYears > 0 && focusAreas.length > 0 && (() => {
-                  const parsedAreas = focusAreas
-                    .map((area, index) => ({
-                      ...area,
-                      hoursPerDay: Math.max(Number.parseFloat(area.hours) || 0, 0),
-                      color: WEEK_COLORS[index % WEEK_COLORS.length]!,
-                    }))
-                    .filter((area) => area.hoursPerDay > 0);
-
-                  const totalHoursPerDay = parsedAreas.reduce(
-                    (sum, area) => sum + area.hoursPerDay,
-                    0
-                  );
-
-                  return parsedAreas
-                    .sort((a, b) => b.hoursPerDay - a.hoursPerDay)
-                    .map((area) => {
-                    const share = area.hoursPerDay / totalHoursPerDay;
-                    const totalDaysPeriod = parsedRecentYears * 365;
-                    const totalDaysInvested = share * totalDaysPeriod;
-                    const months = totalDaysInvested / 30;
-                    const yearsSpent = totalDaysInvested / 365;
-                    const percent = share * 100;
-
-                    let durationLabel: string;
-                    if (yearsSpent >= 1) {
-                      durationLabel = `${yearsSpent.toFixed(1)} years`;
-                    } else if (months >= 1) {
-                      durationLabel = `${months.toFixed(1)} months`;
-                    } else {
-                      durationLabel = `${totalDaysInvested.toFixed(0)} days`;
-                    }
-
-                    return (
-                      <div
-                        key={area.id}
-                        className="rounded-full border px-5 py-2 text-sm transition text-center"
-                        style={{
-                          borderColor: area.color,
-                          color: area.color,
-                          fontFamily: "'Lato', 'Helvetica Neue', Arial, sans-serif",
-                        }}
-                      >
-                        <div className="font-semibold">{area.name}</div>
-                        <div className="text-xs mt-0.5 font-medium">
-                          {durationLabel} • {percent.toFixed(1)}%
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-                <button
-                  type="button"
-                  onClick={toggleFocusEditor}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] text-xl text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-[var(--foreground)]"
-                  aria-label="Configure focus areas"
-                >
-                  ⚙️
-                </button>
-              </div>
-
-              {isEditingFocus && (
-                <div className="mx-auto mt-6 max-w-3xl rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_10%,transparent)] bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] p-6 text-left backdrop-blur">
-                  <div className="mb-4 flex items-center justify-between">
-                    <p className="text-sm uppercase tracking-[0.25em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-                      Daily breakdown
-                    </p>
-                    <div className="flex items-center gap-3">
-                      {(() => {
-                        const totalHours = focusAreas.reduce((sum, area) => sum + (Number.parseFloat(area.hours) || 0), 0);
-                        const isOver24 = totalHours > 24;
-                        const isExactly24 = totalHours === 24;
-                        return (
-                          <p
-                            className="text-xs font-medium transition-colors"
-                            style={{
-                              fontFamily: "'Lato', 'Helvetica Neue', Arial, sans-serif",
-                              color: isOver24 ? '#ef4444' : isExactly24 ? '#10b981' : 'color-mix(in srgb, var(--foreground) 50%, transparent)'
-                            }}
-                          >
-                            Total: {Math.round(totalHours)} hours {isExactly24 && '✓'}
-                          </p>
-                        );
-                      })()}
-                      <button
-                        type="button"
-                        onClick={addFocusArea}
-                        className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-3 py-1 text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
-                      >
-                        + Add pill
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {focusAreas.map((area) => (
-                      <div
-                        key={`editor-${area.id}`}
-                        className="flex flex-wrap gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] px-4 py-3"
-                      >
-                        <label className="flex min-w-[140px] flex-1 flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-                          Name
-                          <input
-                            type="text"
-                            value={area.name}
-                            onChange={(event) =>
-                              updateFocusArea(area.id, "name", event.target.value)
-                            }
-                            className="mt-1 border-b border-[color-mix(in_srgb,var(--foreground)_40%,transparent)] bg-transparent py-1 text-base font-light text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
-                          />
-                        </label>
-                        <label className="flex w-32 flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-                          Hours / day
-                          <input
-                            type="number"
-                            min="0"
-                            max="24"
-                            value={area.hours}
-                            onChange={(event) =>
-                              updateFocusArea(area.id, "hours", event.target.value)
-                            }
-                            className="mt-1 border-b border-[color-mix(in_srgb,var(--foreground)_40%,transparent)] bg-transparent py-1 text-base font-light text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
-                          />
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {parsedRecentYears > 0 && (
-                <WeeklyAllocationGrid
-                  years={parsedRecentYears}
-                  focusAreas={focusAreas}
-                />
-              )}
             </section>
           )}
 
@@ -1466,12 +1298,13 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                       <div className="mt-4" />
 
                       <div className="mt-5 space-y-3">
-                        {goal.keyResults.map((kr) => {
+                        {goal.keyResults.map((kr, krIndex) => {
                           const krKey = krFieldKey(goal.id, kr.id);
                           const isEditingKrTitle =
                             activeKrFieldEdit?.goalId === goal.id &&
                             activeKrFieldEdit.krId === kr.id &&
                             activeKrFieldEdit.field === "title";
+                          const isLastKr = krIndex === goal.keyResults.length - 1;
                           return (
                             <div
                               key={kr.id}
@@ -1545,55 +1378,66 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                                   >
                                     ✕
                                   </button>
+                                  {isLastKr && activeKrDraftGoalId !== goal.id && (
+                                    <button
+                                      type="button"
+                                      onClick={() => startKeyResultDraft(goal.id)}
+                                      className="flex h-7 w-7 items-center justify-center rounded-full text-base text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:text-[var(--foreground)]"
+                                      aria-label="Add key result"
+                                    >
+                                      +
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                               <div className="mt-3" />
                             </div>
                           );
                         })}
+                        {activeKrDraftGoalId === goal.id && goal.keyResults.length > 0 && (
+                          <div className="mt-3 flex flex-wrap items-center gap-3">
+                            <div className="flex-1 rounded-2xl border border-dashed border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] p-4">
+                              <input
+                                type="text"
+                                value={draft.title}
+                                onChange={(event) =>
+                                  handleKrDraftChange(goal.id, event.target.value)
+                                }
+                                placeholder="Add a key result"
+                                className="w-full border-b border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent pb-1 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleAddKeyResult(goal.id)}
+                                className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-[var(--foreground)]"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => cancelKeyResultDraft(goal.id)}
+                                className="text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {goal.keyResults.length === 0 && activeKrDraftGoalId !== goal.id && (
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => startKeyResultDraft(goal.id)}
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-base text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:text-[var(--foreground)]"
+                              aria-label="Add key result"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
                       </div>
-
-                      {activeKrDraftGoalId === goal.id ? (
-                        <div className="mt-5 rounded-2xl border border-dashed border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] p-4">
-                          <div className="mt-3">
-                            <input
-                              type="text"
-                              value={draft.title}
-                              onChange={(event) =>
-                                handleKrDraftChange(goal.id, event.target.value)
-                              }
-                              placeholder="Key result"
-                              className="w-full border-b border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent pb-1 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
-                            />
-                          </div>
-                          <div className="mt-4 flex items-center justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => cancelKeyResultDraft(goal.id)}
-                              className="text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleAddKeyResult(goal.id)}
-                              className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-[var(--foreground)]"
-                            >
-                              Save
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-4 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => startKeyResultDraft(goal.id)}
-                            className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-[var(--foreground)]"
-                          >
-                            + Add KR
-                          </button>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
