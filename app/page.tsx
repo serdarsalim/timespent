@@ -285,8 +285,9 @@ export default function Home() {
   const selectedMonthContent = selectedMonthKey
     ? monthEntries[selectedMonthKey] ?? ""
     : "";
-  const currentProductivityGoal =
-    productivityGoals[productivityYear] ?? "";
+  const currentProductivityGoal = useMemo(() => {
+    return productivityGoals[productivityYear] ?? "";
+  }, [productivityGoals, productivityYear]);
 
   const selectedMonthLabel = useMemo(() => {
     if (!selectedMonth || !dateOfBirth) {
@@ -392,7 +393,7 @@ export default function Home() {
         </div>
       </header>
       <main className="flex flex-1 items-start justify-center px-4">
-        <div className="w-full max-w-4xl py-6 text-center">
+        <div className="w-full max-w-5xl py-6 text-center">
           {view === "life" && (
             <section className="mt-4 space-y-4">
               {isProfileComplete && (
@@ -573,65 +574,61 @@ export default function Home() {
 
           {view === "productivity" && (
             <section className="mt-8 space-y-6 text-left">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-light">Weekly momentum</h2>
-                </div>
-                <label className="flex items-center gap-3 text-sm uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-                  Year
-                  <input
-                    type="number"
-                    value={productivityYear}
-                    onChange={(event) =>
-                      setProductivityYear(
-                        Number.parseInt(event.target.value, 10) || 0
-                      )
-                    }
-                    className="w-24 rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] bg-transparent px-4 py-2 text-base font-medium text-[var(--foreground)] outline-none transition focus:border-[var(--foreground)] caret-[var(--foreground)]"
-                  />
-                </label>
-              </div>
-
-              <ProductivityGrid
-                year={productivityYear}
-                ratings={productivityRatings}
-                setRatings={setProductivityRatings}
-              />
-
-              <div className="rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]">
-                      Theme & goals
-                    </p>
-                    <p className="text-xl font-light">{productivityYear}</p>
-                  </div>
-                </div>
-                <TinyEditor
-                  key={`productivity-goal-${productivityYear}`}
-                  tinymceScriptSrc={TINYMCE_CDN}
-                  value={currentProductivityGoal}
-                  init={{
-                    menubar: false,
-                    statusbar: false,
-                    height: 240,
-                    license_key: "gpl",
-                    skin: theme === "dark" ? "oxide-dark" : "oxide",
-                    content_css: theme === "dark" ? "dark" : "default",
-                    toolbar:
-                      "bold italic underline | bullist numlist | link removeformat",
-                    branding: false,
-                  }}
-                  onEditorChange={(content) =>
-                    setProductivityGoals((prev) => ({
-                      ...prev,
-                      [productivityYear]: content,
-                    }))
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-center sm:gap-6">
+                <h2 className="text-3xl font-light">Productivity tracker</h2>
+                <input
+                  type="number"
+                  value={productivityYear}
+                  onChange={(event) =>
+                    setProductivityYear(
+                      Number.parseInt(event.target.value, 10) || 0
+                    )
                   }
+                  className="w-32 border-b border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] bg-transparent pb-1 text-4xl font-light text-[var(--foreground)] outline-none focus:border-[var(--foreground)] caret-[var(--foreground)] text-center"
                 />
               </div>
 
-              <ProductivityLegend className="mt-3" />
+              <div className="grid gap-8 lg:grid-cols-2">
+                <div className="space-y-6">
+                  <ProductivityGrid
+                    year={productivityYear}
+                    ratings={productivityRatings}
+                    setRatings={setProductivityRatings}
+                  />
+
+                  <ProductivityLegend className="mt-3" />
+                </div>
+
+                <div className="rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] p-6">
+                  <div className="mb-4">
+                    <p className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]">
+                      Theme & goals
+                    </p>
+                  </div>
+                  <TinyEditor
+                    key={`productivity-goal-${productivityYear}`}
+                    tinymceScriptSrc={TINYMCE_CDN}
+                    value={currentProductivityGoal}
+                    init={{
+                      menubar: false,
+                      statusbar: false,
+                      height: 320,
+                      license_key: "gpl",
+                      skin: theme === "dark" ? "oxide-dark" : "oxide",
+                      content_css: theme === "dark" ? "dark" : "default",
+                      toolbar:
+                        "bold italic underline | bullist numlist | link removeformat",
+                      branding: false,
+                    }}
+                    onEditorChange={(content) =>
+                      setProductivityGoals((prev) => ({
+                        ...prev,
+                        [productivityYear]: content,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
             </section>
           )}
         </div>
@@ -856,30 +853,32 @@ const ProductivityGrid = ({
     return new Date(targetYear, monthIndex + 1, 0).getDate();
   };
 
-  const quarterLabels = ["Q1", "Q2", "Q3", "Q4"];
-
   return (
     <div className="rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-6">
       <div className="grid grid-cols-13 gap-2 text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-        <span />
-        {quarterLabels.map((quarter) => (
-          <span key={`quarter-${quarter}`} className="col-span-3 text-center">
-            {quarter}
-          </span>
-        ))}
-        <span />
-      </div>
-      <div className="grid grid-cols-13 gap-2 text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
         <span className="text-right uppercase tracking-[0.2em]">Day</span>
-        {months.map((monthIndex) => (
-          <span key={`month-${monthIndex}`} className="text-center">
-            {new Date(2020, monthIndex).toLocaleString(undefined, {
+        {months.map((monthIndex) => {
+          const monthName = new Date(2020, monthIndex).toLocaleString(
+            undefined,
+            {
               month: "short",
-            })}
-          </span>
-        ))}
+            }
+          );
+          const quarterColor =
+            Math.floor(monthIndex / 3) % 2 === 0
+              ? "text-[#5B8FF9]"
+              : "text-[#F6BD16]";
+          return (
+            <span
+              key={`month-${monthIndex}`}
+              className={`text-center font-medium ${quarterColor}`}
+            >
+              {monthName}
+            </span>
+          );
+        })}
       </div>
-      <div className="mt-3 space-y-1.5">
+      <div className="mt-2 space-y-1.5">
         {days.map((dayOfMonth) => (
           <div key={`row-${dayOfMonth}`} className="grid grid-cols-13 gap-2">
             <span className="text-right text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
@@ -887,7 +886,11 @@ const ProductivityGrid = ({
             </span>
             {months.map((monthIndex) => {
               const key = `${year}-${monthIndex + 1}-${dayOfMonth}`;
-              const currentValue = ratings[key] ?? 0;
+              const hasValue = Object.prototype.hasOwnProperty.call(
+                ratings,
+                key
+              );
+              const currentValue = hasValue ? ratings[key] ?? 0 : 0;
               const scale = PRODUCTIVITY_SCALE[currentValue];
               const validDay =
                 dayOfMonth <= daysInMonth(year, monthIndex);
@@ -896,7 +899,7 @@ const ProductivityGrid = ({
                 return (
                   <span
                     key={`${key}-empty`}
-                    className="h-6 rounded-lg border border-dashed border-[color-mix(in_srgb,var(--foreground)_5%,transparent)]"
+                    className="h-4 w-full rounded-[4px] border border-dashed border-[color-mix(in_srgb,var(--foreground)_5%,transparent)]"
                     aria-hidden="true"
                   />
                 );
@@ -907,7 +910,11 @@ const ProductivityGrid = ({
                   type="button"
                   key={key}
                   onClick={() => handleCycle(monthIndex, dayOfMonth)}
-                  className={`h-6 rounded-lg border border-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-xs font-semibold text-transparent transition hover:shadow focus:text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] ${scale.color}`}
+                  className={`h-4 w-full rounded-[4px] border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-[10px] font-semibold text-transparent transition focus:text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] ${
+                    hasValue
+                      ? scale.color
+                      : "bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)]"
+                  }`}
                   aria-label={`Day ${dayOfMonth} of ${new Date(2020, monthIndex).toLocaleString(undefined, {
                     month: "long",
                   })}, rating ${scale.label}`}
