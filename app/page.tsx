@@ -214,7 +214,7 @@ export default function Home() {
   const [dateOfBirth, setDateOfBirth] = useState<string>("");
   const [personName, setPersonName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
-  const [isEditingProfile, setIsEditingProfile] = useState(true);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [theme, setTheme] = useState<Theme>("light");
   const [focusAreas, setFocusAreas] = useState<FocusArea[]>(defaultFocusAreas);
   const [isEditingFocus, setIsEditingFocus] = useState(false);
@@ -248,6 +248,7 @@ export default function Home() {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    let shouldOpenProfileModal: boolean | null = null;
     try {
       const storedProfile = window.localStorage.getItem("timespent-profile");
       if (storedProfile) {
@@ -267,7 +268,7 @@ export default function Home() {
         }
         const complete =
           Boolean(parsed.name) && Boolean(parsed.dateOfBirth) && Boolean(parsed.email);
-        setIsEditingProfile(!complete);
+        shouldOpenProfileModal = !complete;
       }
 
       const storedFocus = window.localStorage.getItem("timespent-focus-areas");
@@ -345,6 +346,15 @@ export default function Home() {
           setWeekStartDay(parsedWeekStart as WeekdayIndex);
         }
       }
+      const storedProfileModalPreference = window.localStorage.getItem(
+        "timespent-profile-modal-open"
+      );
+      if (storedProfileModalPreference === "true") {
+        shouldOpenProfileModal = true;
+      } else if (storedProfileModalPreference === "false") {
+        shouldOpenProfileModal = false;
+      }
+      setIsEditingProfile(shouldOpenProfileModal ?? false);
       setIsHydrated(true);
     } catch (error) {
       console.error("Failed to load settings from cache", error);
@@ -352,6 +362,20 @@ export default function Home() {
     }
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        "timespent-profile-modal-open",
+        isEditingProfile ? "true" : "false"
+      );
+    } catch (error) {
+      console.error("Failed to cache profile modal state", error);
+    }
+  }, [isEditingProfile, isHydrated]);
 
   useEffect(() => {
     try {
@@ -1824,123 +1848,175 @@ const WeeklySchedule = ({
     field: "time" | "endTime" | "title" | "color" | "repeat",
     value: string
   ) => {
-    setActiveEntry((prev) => {
-      if (!prev) {
-        return prev;
-      }
-      const resolution = updateEntry(
-        prev.dayKey,
-        prev.index,
-        field,
-        value,
-        prev.meta,
-        prev.scope
-      );
-      const nextEntryData = { ...prev.data };
-      if (field === "repeat") {
-        const repeatValue = value as RepeatFrequency;
-        if (repeatValue === "none") {
-          nextEntryData.repeat = undefined;
-          nextEntryData.repeatUntil = null;
-          nextEntryData.repeatDays = undefined;
-        } else if (repeatValue === "daily") {
-          nextEntryData.repeat = repeatValue;
-          if (!nextEntryData.repeatDays || nextEntryData.repeatDays.length === 0) {
-            nextEntryData.repeatDays = [...ALL_WEEKDAY_INDICES];
-          }
-        } else {
-          nextEntryData.repeat = repeatValue;
-          nextEntryData.repeatDays = undefined;
+    if (!activeEntry) {
+      return;
+    }
+    const resolution = updateEntry(
+      activeEntry.dayKey,
+      activeEntry.index,
+      field,
+      value,
+      activeEntry.meta,
+      activeEntry.scope
+    );
+    const nextEntryData = { ...activeEntry.data };
+    if (field === "repeat") {
+      const repeatValue = value as RepeatFrequency;
+      if (repeatValue === "none") {
+        nextEntryData.repeat = undefined;
+        nextEntryData.repeatUntil = null;
+        nextEntryData.repeatDays = undefined;
+      } else if (repeatValue === "daily") {
+        nextEntryData.repeat = repeatValue;
+        if (!nextEntryData.repeatDays || nextEntryData.repeatDays.length === 0) {
+          nextEntryData.repeatDays = [...ALL_WEEKDAY_INDICES];
         }
       } else {
-        nextEntryData[field] = value;
+        nextEntryData.repeat = repeatValue;
+        nextEntryData.repeatDays = undefined;
       }
-      const nextState: EditingEntryState = {
-        ...prev,
-        data: nextEntryData,
-      };
-      if (resolution && resolution.targetIndex !== null) {
-        nextState.dayKey = resolution.targetDayKey;
-        nextState.index = resolution.targetIndex;
-        nextState.meta = {
+    } else {
+      nextEntryData[field] = value;
+    }
+    let nextState: EditingEntryState = {
+      ...activeEntry,
+      data: nextEntryData,
+    };
+    if (resolution && resolution.targetIndex !== null) {
+      nextState = {
+        ...nextState,
+        dayKey: resolution.targetDayKey,
+        index: resolution.targetIndex,
+        meta: {
           originalDayKey: resolution.targetDayKey,
           originalEntryIndex: resolution.targetIndex,
+        },
+      };
+      if (activeEntry.meta.originalDayKey !== resolution.targetDayKey) {
+        nextState = {
+          ...nextState,
+          canChooseScope: false,
+          scope: "single",
+          data: {
+            ...nextState.data,
+            repeat: undefined,
+            repeatUntil: null,
+            repeatDays: undefined,
+          },
         };
-        if (prev.meta.originalDayKey !== resolution.targetDayKey) {
-          nextState.canChooseScope = false;
-          nextState.scope = "future";
-          if (prev.scope === "single") {
-            nextState.data = {
-              ...nextState.data,
-              repeat: undefined,
-              repeatUntil: null,
-              repeatDays: undefined,
-            };
-          }
-        }
       }
-      return nextState;
-    });
+    }
+    setActiveEntry(nextState);
   };
 
   const handleActiveRepeatDaysToggle = (dayIndex: WeekdayIndex) => {
-    setActiveEntry((prev) => {
-      if (!prev) {
-        return prev;
-      }
-      const currentDays = prev.data.repeatDays ?? [];
-      const hasDay = currentDays.includes(dayIndex);
-      const nextDays = hasDay
-        ? currentDays.filter((day) => day !== dayIndex)
-        : [...currentDays, dayIndex].sort((a, b) => a - b);
-      const resolution = updateEntry(
-        prev.dayKey,
-        prev.index,
-        "repeatDays",
-        nextDays,
-        prev.meta,
-        prev.scope
-      );
-      const nextState: EditingEntryState = {
-        ...prev,
-        data: {
-          ...prev.data,
-          repeatDays: nextDays,
-        },
-      };
-      if (resolution && resolution.targetIndex !== null) {
-        nextState.dayKey = resolution.targetDayKey;
-        nextState.index = resolution.targetIndex;
-        nextState.meta = {
+    if (!activeEntry) {
+      return;
+    }
+    const currentDays = activeEntry.data.repeatDays ?? [];
+    const hasDay = currentDays.includes(dayIndex);
+    const nextDays = hasDay
+      ? currentDays.filter((day) => day !== dayIndex)
+      : [...currentDays, dayIndex].sort((a, b) => a - b);
+    const resolution = updateEntry(
+      activeEntry.dayKey,
+      activeEntry.index,
+      "repeatDays",
+      nextDays,
+      activeEntry.meta,
+      activeEntry.scope
+    );
+    let nextState: EditingEntryState = {
+      ...activeEntry,
+      data: {
+        ...activeEntry.data,
+        repeatDays: nextDays,
+      },
+    };
+    if (resolution && resolution.targetIndex !== null) {
+      nextState = {
+        ...nextState,
+        dayKey: resolution.targetDayKey,
+        index: resolution.targetIndex,
+        meta: {
           originalDayKey: resolution.targetDayKey,
           originalEntryIndex: resolution.targetIndex,
+        },
+      };
+      if (activeEntry.meta.originalDayKey !== resolution.targetDayKey) {
+        nextState = {
+          ...nextState,
+          canChooseScope: false,
+          scope: "single",
+          data: {
+            ...nextState.data,
+            repeat: undefined,
+            repeatUntil: null,
+            repeatDays: undefined,
+          },
         };
-        if (prev.meta.originalDayKey !== resolution.targetDayKey) {
-          nextState.canChooseScope = false;
-          nextState.scope = "future";
-          if (prev.scope === "single") {
-            nextState.data = {
-              ...nextState.data,
-              repeat: undefined,
-              repeatUntil: null,
-              repeatDays: undefined,
-            };
-          }
-        }
       }
-      return nextState;
+    }
+    setActiveEntry(nextState);
+  };
+
+  const convertEntryToSingleInstance = (
+    entry: EditingEntryState
+  ): EditingEntryState | null => {
+    if (
+      !entry.meta.originalDayKey ||
+      entry.meta.originalDayKey === entry.dayKey
+    ) {
+      return entry;
+    }
+    let latestResolution: EntryResolution | null = null;
+    setScheduleEntries((prev) => {
+      const resolution = prepareEntriesForMutation(
+        prev,
+        entry.dayKey,
+        entry.index,
+        entry.meta,
+        "single"
+      );
+      latestResolution = resolution;
+      return resolution.entries;
     });
+    if (!latestResolution || latestResolution.targetIndex === null) {
+      return entry;
+    }
+    return {
+      ...entry,
+      dayKey: latestResolution.targetDayKey,
+      index: latestResolution.targetIndex,
+      meta: {
+        originalDayKey: latestResolution.targetDayKey,
+        originalEntryIndex: latestResolution.targetIndex,
+      },
+      canChooseScope: false,
+      scope: "single",
+      data: {
+        ...entry.data,
+        repeat: undefined,
+        repeatUntil: null,
+        repeatDays: undefined,
+      },
+    };
   };
 
   const handleScopeSelection = (scope: "single" | "future") => {
-    setActiveEntry((prev) => {
-      if (!prev || !prev.canChooseScope) {
-        return prev;
+    if (!activeEntry || !activeEntry.canChooseScope || scope === activeEntry.scope) {
+      return;
+    }
+    if (scope === "single" && activeEntry.scope !== "single") {
+      const converted = convertEntryToSingleInstance(activeEntry);
+      if (converted) {
+        setActiveEntry(converted);
       }
-      return {
-        ...prev,
-        scope,
-      };
+      return;
+    }
+    setActiveEntry({
+      ...activeEntry,
+      scope,
     });
   };
 
