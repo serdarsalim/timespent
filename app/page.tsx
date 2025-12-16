@@ -400,6 +400,32 @@ export default function Home() {
     });
   }, [selectedMonth, dateOfBirth]);
 
+  const selectedMonthAge = useMemo(() => {
+    if (!selectedMonth || !dateOfBirth) {
+      return null;
+    }
+    const dob = new Date(dateOfBirth);
+    if (Number.isNaN(dob.getTime())) {
+      return null;
+    }
+    const monthDate = new Date(dob);
+    monthDate.setMonth(
+      dob.getMonth() + (selectedMonth.year - 1) * 12 + (selectedMonth.month - 1)
+    );
+    let years = monthDate.getFullYear() - dob.getFullYear();
+    let months = monthDate.getMonth() - dob.getMonth();
+    if (monthDate.getDate() < dob.getDate()) {
+      months -= 1;
+    }
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+    years = Math.max(years, 0);
+    months = Math.max(months, 0);
+    return { years, months };
+  }, [selectedMonth, dateOfBirth]);
+
   const handleEntryChange = (content: string) => {
     if (!selectedMonthKey) {
       return;
@@ -740,6 +766,11 @@ export default function Home() {
                 <p className="text-xl font-light text-[var(--foreground)]">
                   {selectedMonthLabel ??
                     `Year ${selectedMonth.year}, month ${selectedMonth.month}`}
+                  {selectedMonthAge && (
+                    <span className="ml-2 text-base text-[color-mix(in_srgb,var(--foreground)_65%,transparent)]">
+                      • Age {selectedMonthAge.years}y {selectedMonthAge.months}m
+                    </span>
+                  )}
                 </p>
               </div>
               <button
@@ -878,9 +909,9 @@ const YearRow = ({
               isSelected
                 ? "bg-[var(--foreground)] ring-2 ring-[color-mix(in_srgb,var(--foreground)_40%,transparent)]"
                 : hasEntry
-                  ? "bg-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
+                  ? "bg-[#f6ad55] hover:bg-[#f28c28]"
                   : isLived
-                    ? "bg-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:bg-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
+                    ? "bg-[color-mix(in_srgb,var(--foreground)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--foreground)_65%,transparent)]"
                     : "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] opacity-70 hover:opacity-100"
             }`}
             aria-label={`Year ${yearNumber}, month ${displayMonth}`}
