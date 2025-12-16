@@ -20,6 +20,8 @@ type ScheduleEntry = {
   color?: string;
   repeat?: RepeatFrequency;
   repeatUntil?: string | null;
+  repeatDays?: WeekdayIndex[];
+  skipDates?: string[];
 };
 
 type WeekdayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -33,6 +35,20 @@ const WEEK_START_OPTIONS: { value: WeekdayIndex; label: string }[] = [
   { value: 5, label: "Friday" },
   { value: 6, label: "Saturday" },
 ];
+
+const ALL_WEEKDAY_INDICES: WeekdayIndex[] = [0, 1, 2, 3, 4, 5, 6];
+
+const WEEKDAY_SHORT_LABELS: string[] = Array.from({ length: 7 }, (_, day) =>
+  new Date(2020, 5, day + 7).toLocaleDateString(undefined, {
+    weekday: "short",
+  })
+);
+
+const TIME_OPTIONS: string[] = Array.from({ length: 24 * 4 }, (_, index) => {
+  const hours = Math.floor(index / 4);
+  const minutes = (index % 4) * 15;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+});
 
 type EntryMeta = {
   originalDayKey?: string;
@@ -50,6 +66,8 @@ type EditingEntryState = {
   index: number;
   meta: EntryMeta;
   data: ScheduleEntry;
+  scope: "single" | "future";
+  canChooseScope: boolean;
 };
 
 const defaultFocusAreas: FocusArea[] = [
@@ -1570,14 +1588,15 @@ const WeeklySchedule = ({
   setScheduleEntries,
   weekStartDay,
 }: WeeklyScheduleProps) => {
-  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
+  const [currentWeekAnchor, setCurrentWeekAnchor] = useState(() =>
     getWeekStart(new Date(), weekStartDay)
   );
   const [activeEntry, setActiveEntry] = useState<EditingEntryState | null>(null);
 
-  useEffect(() => {
-    setCurrentWeekStart((prev) => getWeekStart(prev, weekStartDay));
-  }, [weekStartDay]);
+  const currentWeekStart = useMemo(
+    () => getWeekStart(currentWeekAnchor, weekStartDay),
+    [currentWeekAnchor, weekStartDay]
+  );
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, idx) => {
@@ -1604,14 +1623,15 @@ const WeeklySchedule = ({
   );
 
   const goToWeek = (date: Date) => {
-    setCurrentWeekStart(getWeekStart(date, weekStartDay));
+    setCurrentWeekAnchor(getWeekStart(date, weekStartDay));
   };
 
   const handleWeekNavigation = (direction: -1 | 1) => {
-    setCurrentWeekStart((prev) => {
-      const next = new Date(prev);
-      next.setDate(prev.getDate() + direction * 7);
-      return getWeekStart(next, weekStartDay);
+    setCurrentWeekAnchor((prev) => {
+      const anchor = getWeekStart(prev, weekStartDay);
+      const next = new Date(anchor);
+      next.setDate(anchor.getDate() + direction * 7);
+      return next;
     });
   };
 
@@ -1624,7 +1644,7 @@ const WeeklySchedule = ({
     }
     const parsed = parseISOWeekInputValue(value);
     if (parsed) {
-      setCurrentWeekStart(getWeekStart(parsed, weekStartDay));
+      setCurrentWeekAnchor(getWeekStart(parsed, weekStartDay));
     }
   };
   const formatDayKey = (date: Date) => {
@@ -1669,11 +1689,18 @@ const WeeklySchedule = ({
   const removeEntry = (
     dayKey: string,
     index: number,
-    meta?: EntryMeta
+    meta?: EntryMeta,
+    scope: "single" | "future" = "future"
   ): EntryResolution | null => {
     let latestResolution: EntryResolution | null = null;
     setScheduleEntries((prev) => {
-      const resolution = prepareEntriesForMutation(prev, dayKey, index, meta);
+      const resolution = prepareEntriesForMutation(
+        prev,
+        dayKey,
+        index,
+        meta,
+        scope
+      );
       latestResolution = resolution;
       if (resolution.targetIndex === null) {
         return prev;
@@ -1694,13 +1721,26 @@ const WeeklySchedule = ({
   const updateEntry = (
     dayKey: string,
     index: number,
-    field: "time" | "endTime" | "title" | "color" | "repeat",
-    value: string,
-    meta?: EntryMeta
+    field:
+      | "time"
+      | "endTime"
+      | "title"
+      | "color"
+      | "repeat"
+      | "repeatDays",
+    value: string | WeekdayIndex[],
+    meta?: EntryMeta,
+    scope: "single" | "future" = "future"
   ): EntryResolution | null => {
     let latestResolution: EntryResolution | null = null;
     setScheduleEntries((prev) => {
-      const resolution = prepareEntriesForMutation(prev, dayKey, index, meta);
+      const resolution = prepareEntriesForMutation(
+        prev,
+        dayKey,
+        index,
+        meta,
+        scope
+      );
       latestResolution = resolution;
       if (resolution.targetIndex === null) {
         return prev;
@@ -1710,20 +1750,32 @@ const WeeklySchedule = ({
       const currentEntry = { ...entries[resolution.targetIndex]! };
 
       if (field === "repeat") {
-        if (value === "none") {
+        const repeatValue = value as string;
+        if (repeatValue === "none") {
           currentEntry.repeat = undefined;
           currentEntry.repeatUntil = null;
+          currentEntry.repeatDays = undefined;
+        } else if (repeatValue === "daily") {
+          currentEntry.repeat = repeatValue as RepeatFrequency;
+          if (!currentEntry.repeatDays || currentEntry.repeatDays.length === 0) {
+            currentEntry.repeatDays = [...ALL_WEEKDAY_INDICES];
+          }
         } else {
-          currentEntry.repeat = value as RepeatFrequency;
+          currentEntry.repeat = repeatValue as RepeatFrequency;
+          currentEntry.repeatDays = undefined;
         }
+      } else if (field === "repeatDays") {
+        currentEntry.repeatDays = Array.isArray(value)
+          ? (value as WeekdayIndex[])
+          : undefined;
       } else if (field === "time") {
-        currentEntry.time = value;
+        currentEntry.time = value as string;
       } else if (field === "endTime") {
-        currentEntry.endTime = value;
+        currentEntry.endTime = value as string;
       } else if (field === "title") {
-        currentEntry.title = value;
+        currentEntry.title = value as string;
       } else if (field === "color") {
-        currentEntry.color = value;
+        currentEntry.color = value as string;
       }
 
       entries[resolution.targetIndex] = currentEntry;
@@ -1739,6 +1791,14 @@ const WeeklySchedule = ({
     meta: EntryMeta,
     entryData: ScheduleEntry
   ) => {
+    const isRecurring = Boolean(
+      entryData.repeat && entryData.repeat !== "none"
+    );
+    const canChooseScope =
+      isRecurring &&
+      Boolean(meta.originalDayKey) &&
+      meta.originalDayKey !== dayKey;
+
     setActiveEntry({
       dayKey,
       index,
@@ -1750,14 +1810,18 @@ const WeeklySchedule = ({
         color: entryData.color,
         repeat: entryData.repeat,
         repeatUntil: entryData.repeatUntil ?? null,
+        repeatDays: entryData.repeatDays ? [...entryData.repeatDays] : undefined,
+        skipDates: entryData.skipDates ? [...entryData.skipDates] : undefined,
       },
+      scope: "future",
+      canChooseScope,
     });
   };
 
   const closeEntryEditor = () => setActiveEntry(null);
 
   const handleActiveFieldChange = (
-    field: "time" | "endTime" | "title" | "color",
+    field: "time" | "endTime" | "title" | "color" | "repeat",
     value: string
   ) => {
     setActiveEntry((prev) => {
@@ -1769,9 +1833,28 @@ const WeeklySchedule = ({
         prev.index,
         field,
         value,
-        prev.meta
+        prev.meta,
+        prev.scope
       );
-      const nextEntryData = { ...prev.data, [field]: value };
+      const nextEntryData = { ...prev.data };
+      if (field === "repeat") {
+        const repeatValue = value as RepeatFrequency;
+        if (repeatValue === "none") {
+          nextEntryData.repeat = undefined;
+          nextEntryData.repeatUntil = null;
+          nextEntryData.repeatDays = undefined;
+        } else if (repeatValue === "daily") {
+          nextEntryData.repeat = repeatValue;
+          if (!nextEntryData.repeatDays || nextEntryData.repeatDays.length === 0) {
+            nextEntryData.repeatDays = [...ALL_WEEKDAY_INDICES];
+          }
+        } else {
+          nextEntryData.repeat = repeatValue;
+          nextEntryData.repeatDays = undefined;
+        }
+      } else {
+        nextEntryData[field] = value;
+      }
       const nextState: EditingEntryState = {
         ...prev,
         data: nextEntryData,
@@ -1783,28 +1866,46 @@ const WeeklySchedule = ({
           originalDayKey: resolution.targetDayKey,
           originalEntryIndex: resolution.targetIndex,
         };
+        if (prev.meta.originalDayKey !== resolution.targetDayKey) {
+          nextState.canChooseScope = false;
+          nextState.scope = "future";
+          if (prev.scope === "single") {
+            nextState.data = {
+              ...nextState.data,
+              repeat: undefined,
+              repeatUntil: null,
+              repeatDays: undefined,
+            };
+          }
+        }
       }
       return nextState;
     });
   };
 
-  const handleActiveRepeatChange = (value: RepeatFrequency) => {
+  const handleActiveRepeatDaysToggle = (dayIndex: WeekdayIndex) => {
     setActiveEntry((prev) => {
       if (!prev) {
         return prev;
       }
+      const currentDays = prev.data.repeatDays ?? [];
+      const hasDay = currentDays.includes(dayIndex);
+      const nextDays = hasDay
+        ? currentDays.filter((day) => day !== dayIndex)
+        : [...currentDays, dayIndex].sort((a, b) => a - b);
       const resolution = updateEntry(
         prev.dayKey,
         prev.index,
-        "repeat",
-        value,
-        prev.meta
+        "repeatDays",
+        nextDays,
+        prev.meta,
+        prev.scope
       );
       const nextState: EditingEntryState = {
         ...prev,
         data: {
           ...prev.data,
-          repeat: value === "none" ? undefined : value,
+          repeatDays: nextDays,
         },
       };
       if (resolution && resolution.targetIndex !== null) {
@@ -1814,8 +1915,32 @@ const WeeklySchedule = ({
           originalDayKey: resolution.targetDayKey,
           originalEntryIndex: resolution.targetIndex,
         };
+        if (prev.meta.originalDayKey !== resolution.targetDayKey) {
+          nextState.canChooseScope = false;
+          nextState.scope = "future";
+          if (prev.scope === "single") {
+            nextState.data = {
+              ...nextState.data,
+              repeat: undefined,
+              repeatUntil: null,
+              repeatDays: undefined,
+            };
+          }
+        }
       }
       return nextState;
+    });
+  };
+
+  const handleScopeSelection = (scope: "single" | "future") => {
+    setActiveEntry((prev) => {
+      if (!prev || !prev.canChooseScope) {
+        return prev;
+      }
+      return {
+        ...prev,
+        scope,
+      };
     });
   };
 
@@ -1823,7 +1948,12 @@ const WeeklySchedule = ({
     if (!activeEntry) {
       return;
     }
-    removeEntry(activeEntry.dayKey, activeEntry.index, activeEntry.meta);
+    removeEntry(
+      activeEntry.dayKey,
+      activeEntry.index,
+      activeEntry.meta,
+      activeEntry.scope
+    );
     setActiveEntry(null);
   };
 
@@ -1899,7 +2029,11 @@ const WeeklySchedule = ({
         if (!isAfterStart) {
           shouldShow = false;
         } else if (entry.repeat === "daily") {
-          shouldShow = true;
+          const allowedDays = entry.repeatDays;
+          shouldShow =
+            !allowedDays ||
+            allowedDays.length === 0 ||
+            allowedDays.includes(date.getDay() as WeekdayIndex);
         } else if (entry.repeat === "weekly") {
           shouldShow = daysDiff % 7 === 0;
         } else if (entry.repeat === "biweekly") {
@@ -1909,6 +2043,10 @@ const WeeklySchedule = ({
         }
 
         if (repeatEnd && date > repeatEnd) {
+          shouldShow = false;
+        }
+
+        if (shouldShow && entry.skipDates && entry.skipDates.includes(dayKey)) {
           shouldShow = false;
         }
 
@@ -1931,7 +2069,8 @@ const WeeklySchedule = ({
     baseEntries: Record<string, ScheduleEntry[]>,
     occurrenceDayKey: string,
     fallbackIndex: number,
-    meta?: EntryMeta
+    meta?: EntryMeta,
+    scope: "single" | "future" = "future"
   ): EntryResolution => {
     const originalDayKey = meta?.originalDayKey ?? occurrenceDayKey;
     const originalEntryIndex =
@@ -1955,31 +2094,73 @@ const WeeklySchedule = ({
       };
     }
 
-    const updatedEntries = { ...baseEntries };
-    const updatedSourceEntries = [...(sourceEntries ?? [])];
-    const previousDayKey = getPreviousDayKey(occurrenceDayKey);
-    updatedSourceEntries[originalEntryIndex] = {
-      ...sourceEntry,
-      repeatUntil: previousDayKey ?? sourceEntry.repeatUntil ?? null,
-    };
-    updatedEntries[originalDayKey] = updatedSourceEntries;
+    if (scope === "single") {
+      const updatedEntries = { ...baseEntries };
+      const updatedSourceEntries = [...(sourceEntries ?? [])];
+      const skipDateSet = new Set(sourceEntry.skipDates ?? []);
+      skipDateSet.add(occurrenceDayKey);
+      updatedSourceEntries[originalEntryIndex] = {
+        ...sourceEntry,
+        skipDates: Array.from(skipDateSet),
+      };
+      updatedEntries[originalDayKey] = updatedSourceEntries;
 
-    const clonedEntry: ScheduleEntry = { ...sourceEntry };
-    const dayEntries = [...(updatedEntries[occurrenceDayKey] ?? [])];
-    dayEntries.push(clonedEntry);
-    const newIndex = dayEntries.length - 1;
-    updatedEntries[occurrenceDayKey] = dayEntries;
+      const dayEntries = [...(updatedEntries[occurrenceDayKey] ?? [])];
+      const clonedEntry: ScheduleEntry = {
+        ...sourceEntry,
+        repeat: undefined,
+        repeatUntil: null,
+        repeatDays: undefined,
+        skipDates: undefined,
+      };
+      dayEntries.push(clonedEntry);
+      const newIndex = dayEntries.length - 1;
+      updatedEntries[occurrenceDayKey] = dayEntries;
+
+      return {
+        entries: updatedEntries,
+        targetDayKey: occurrenceDayKey,
+        targetIndex: newIndex,
+      };
+    }
+
+    if (scope === "future") {
+      const updatedEntries = { ...baseEntries };
+      const updatedSourceEntries = [...(sourceEntries ?? [])];
+      const previousDayKey = getPreviousDayKey(occurrenceDayKey);
+      updatedSourceEntries[originalEntryIndex] = {
+        ...sourceEntry,
+        repeatUntil: previousDayKey ?? sourceEntry.repeatUntil ?? null,
+      };
+      updatedEntries[originalDayKey] = updatedSourceEntries;
+
+      const clonedEntry: ScheduleEntry = {
+        ...sourceEntry,
+        skipDates: sourceEntry.skipDates ? [...sourceEntry.skipDates] : undefined,
+      };
+      const dayEntries = [...(updatedEntries[occurrenceDayKey] ?? [])];
+      dayEntries.push(clonedEntry);
+      const newIndex = dayEntries.length - 1;
+      updatedEntries[occurrenceDayKey] = dayEntries;
+
+      return {
+        entries: updatedEntries,
+        targetDayKey: occurrenceDayKey,
+        targetIndex: newIndex,
+      };
+    }
 
     return {
-      entries: updatedEntries,
-      targetDayKey: occurrenceDayKey,
-      targetIndex: newIndex,
+      entries: baseEntries,
+      targetDayKey: originalDayKey,
+      targetIndex: originalEntryIndex,
     };
   };
 
   const activeEntryDate = activeEntry ? parseDayKey(activeEntry.dayKey) : null;
   const activeEntryRepeatValue: RepeatFrequency =
     activeEntry?.data.repeat ?? "none";
+  const activeEntryRepeatDays = activeEntry?.data.repeatDays ?? [];
 
   return (
     <div className="mx-auto w-full text-left">
@@ -2175,31 +2356,71 @@ const WeeklySchedule = ({
               </button>
             </div>
 
+            {activeEntry.canChooseScope && (
+              <div className="mb-4 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                  Apply changes to
+                </p>
+                <div className="mt-3 space-y-2 text-sm">
+                  <label className="flex items-center gap-2 text-[var(--foreground)]">
+                    <input
+                      type="radio"
+                      name="entry-scope"
+                      value="single"
+                      checked={activeEntry.scope === "single"}
+                      onChange={() => handleScopeSelection("single")}
+                      className="h-4 w-4 accent-[var(--foreground)]"
+                    />
+                    This task only
+                  </label>
+                  <label className="flex items-center gap-2 text-[var(--foreground)]">
+                    <input
+                      type="radio"
+                      name="entry-scope"
+                      value="future"
+                      checked={activeEntry.scope === "future"}
+                      onChange={() => handleScopeSelection("future")}
+                      className="h-4 w-4 accent-[var(--foreground)]"
+                    />
+                    This and future tasks
+                  </label>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
                   Start
-                  <input
-                    type="text"
-                    value={activeEntry.data.time}
+                  <select
+                    value={activeEntry.data.time ?? TIME_OPTIONS[0]}
                     onChange={(event) =>
                       handleActiveFieldChange("time", event.target.value)
                     }
-                    placeholder="09:00"
-                    className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-4 py-1.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
-                  />
+                    className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-3 py-1.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+                  >
+                    {TIME_OPTIONS.map((time) => (
+                      <option key={`start-${time}`} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
                   End
-                  <input
-                    type="text"
-                    value={activeEntry.data.endTime ?? ""}
+                  <select
+                    value={activeEntry.data.endTime ?? TIME_OPTIONS[0]}
                     onChange={(event) =>
                       handleActiveFieldChange("endTime", event.target.value)
                     }
-                    placeholder="10:00"
-                    className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-4 py-1.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
-                  />
+                    className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-3 py-1.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+                  >
+                    {TIME_OPTIONS.map((time) => (
+                      <option key={`end-${time}`} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
               <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
@@ -2230,7 +2451,7 @@ const WeeklySchedule = ({
                 <select
                   value={activeEntryRepeatValue}
                   onChange={(event) =>
-                    handleActiveRepeatChange(event.target.value as RepeatFrequency)
+                    handleActiveFieldChange("repeat", event.target.value)
                   }
                   className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-4 py-1.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
                 >
@@ -2240,6 +2461,28 @@ const WeeklySchedule = ({
                   <option value="biweekly">Every 2 weeks</option>
                   <option value="monthly">Monthly</option>
                 </select>
+                {activeEntryRepeatValue === "daily" && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {WEEKDAY_SHORT_LABELS.map((label, dayIndex) => {
+                      const index = dayIndex as WeekdayIndex;
+                      const isActive = activeEntryRepeatDays.includes(index);
+                      return (
+                        <button
+                          key={`repeat-day-${label}`}
+                          type="button"
+                          onClick={() => handleActiveRepeatDaysToggle(index)}
+                          className={`rounded-full border px-3 py-1 text-xs transition ${
+                            isActive
+                              ? "border-[var(--foreground)] text-[var(--foreground)]"
+                              : "border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </label>
             </div>
 
