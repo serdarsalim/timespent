@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 
 type Theme = "light" | "dark";
@@ -24,6 +25,13 @@ const determineTheme = (): Theme => {
 
 type ViewMode = "life" | "time-spent";
 
+const TinyEditor = dynamic(
+  () => import("@tinymce/tinymce-react").then((mod) => mod.Editor),
+  { ssr: false }
+);
+const TINYMCE_CDN =
+  "https://cdnjs.cloudflare.com/ajax/libs/tinymce/8.1.2/tinymce.min.js";
+
 export default function Home() {
   const [dateOfBirth, setDateOfBirth] = useState<string>("");
   const [personName, setPersonName] = useState<string>("");
@@ -34,6 +42,11 @@ export default function Home() {
   const [isEditingFocus, setIsEditingFocus] = useState(false);
   const [recentYears, setRecentYears] = useState<string>("10");
   const [view, setView] = useState<ViewMode>("life");
+  const [monthEntries, setMonthEntries] = useState<Record<string, string>>({});
+  const [selectedMonth, setSelectedMonth] = useState<{
+    year: number;
+    month: number;
+  } | null>(null);
 
   useEffect(() => {
     const autoTheme = determineTheme();
@@ -76,6 +89,19 @@ export default function Home() {
           setFocusAreas(parsedFocus);
         }
       }
+
+      const storedEntries = window.localStorage.getItem(
+        "timespent-life-entries"
+      );
+      if (storedEntries) {
+        const parsedEntries = JSON.parse(storedEntries) as Record<
+          string,
+          string
+        >;
+        if (parsedEntries && typeof parsedEntries === "object") {
+          setMonthEntries(parsedEntries);
+        }
+      }
     } catch (error) {
       console.error("Failed to load settings from cache", error);
     }
@@ -107,6 +133,17 @@ export default function Home() {
       console.error("Failed to cache focus areas", error);
     }
   }, [focusAreas]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        "timespent-life-entries",
+        JSON.stringify(monthEntries)
+      );
+    } catch (error) {
+      console.error("Failed to cache month entries", error);
+    }
+  }, [monthEntries]);
 
   const isProfileComplete = Boolean(personName && dateOfBirth && email);
   const isProfileEditorVisible = isEditingProfile || !isProfileComplete;
@@ -165,6 +202,60 @@ export default function Home() {
     const clampedMonths = Math.max(0, Math.min(months, 90 * 12));
     return { monthsLived: clampedMonths, hasValidBirthdate: true };
   }, [dateOfBirth]);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (view !== "life" && selectedMonth) {
+      setSelectedMonth(null);
+    }
+  }, [view, selectedMonth]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const handleMonthSelect = (year: number, month: number) => {
+    setSelectedMonth({ year, month });
+  };
+
+  const monthKey = (year: number, month: number) => `${year}-${month}`;
+
+  const selectedMonthKey = selectedMonth
+    ? monthKey(selectedMonth.year, selectedMonth.month)
+    : null;
+  const selectedMonthContent = selectedMonthKey
+    ? monthEntries[selectedMonthKey] ?? ""
+    : "";
+
+  const selectedMonthLabel = useMemo(() => {
+    if (!selectedMonth || !dateOfBirth) {
+      return null;
+    }
+    const dob = new Date(dateOfBirth);
+    if (Number.isNaN(dob.getTime())) {
+      return null;
+    }
+    const monthDate = new Date(dob);
+    monthDate.setMonth(
+      dob.getMonth() + (selectedMonth.year - 1) * 12 + (selectedMonth.month - 1)
+    );
+    return monthDate.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+    });
+  }, [selectedMonth, dateOfBirth]);
+
+  const handleEntryChange = (content: string) => {
+    if (!selectedMonthKey) {
+      return;
+    }
+    setMonthEntries((prev) => {
+      const updated = { ...prev };
+      if (!content.trim()) {
+        delete updated[selectedMonthKey];
+      } else {
+        updated[selectedMonthKey] = content;
+      }
+      return updated;
+    });
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--background)] text-[var(--foreground)] transition-colors">
@@ -228,17 +319,11 @@ export default function Home() {
       <main className="flex flex-1 items-start justify-center px-4">
         <div className="w-full max-w-4xl py-6 text-center">
           {view === "life" && (
-            <section className="mt-8 space-y-6">
+            <section className="mt-4 space-y-4">
               {isProfileComplete && (
                 <p className="text-2xl font-light leading-tight sm:text-4xl">
-                  <span className="inline-block sm:inline">
-                    {personName.trim()} was born on
-                  </span>{" "}
-                  {new Date(dateOfBirth).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {personName.trim()}
+                  {"'"}s journey
                 </p>
               )}
 
@@ -307,10 +392,17 @@ export default function Home() {
               )}
 
               {hasValidBirthdate && (
-                <div className="mt-12 flex justify-center">
-                  <AgeGrid totalMonthsLived={monthsLived} maxYears={90} />
+                <div className="mt-4 flex justify-center">
+                  <AgeGrid
+                    totalMonthsLived={monthsLived}
+                    maxYears={90}
+                    onSelectMonth={handleMonthSelect}
+                    selectedMonth={selectedMonth}
+                    entries={monthEntries}
+                  />
                 </div>
               )}
+
             </section>
           )}
 
@@ -406,6 +498,51 @@ export default function Home() {
         </div>
       </main>
 
+      {selectedMonth && hasValidBirthdate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          onClick={() => setSelectedMonth(null)}
+        >
+          <div className="w-full max-w-3xl rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-[var(--background)] p-6 text-left shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]">
+                  Month journal
+                </p>
+                <p className="text-xl font-light text-[var(--foreground)]">
+                  {selectedMonthLabel ??
+                    `Year ${selectedMonth.year}, month ${selectedMonth.month}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMonth(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]"
+              >
+                ✕
+              </button>
+            </div>
+            <TinyEditor
+              key={selectedMonthKey ?? "editor"}
+              tinymceScriptSrc={TINYMCE_CDN}
+              value={selectedMonthContent}
+              init={{
+                menubar: false,
+                statusbar: false,
+                height: 320,
+                license_key: "gpl",
+                skin: theme === "dark" ? "oxide-dark" : "oxide",
+                content_css: theme === "dark" ? "dark" : "default",
+                toolbar:
+                  "bold italic underline | bullist numlist | link removeformat",
+                branding: false,
+              }}
+              onEditorChange={handleEntryChange}
+            />
+          </div>
+        </div>
+      )}
+
       <footer className="border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] px-6 py-4 text-sm">
         <p>TimeSpent</p>
       </footer>
@@ -416,9 +553,18 @@ export default function Home() {
 type AgeGridProps = {
   totalMonthsLived: number;
   maxYears: number;
+  onSelectMonth: (year: number, month: number) => void;
+  selectedMonth: { year: number; month: number } | null;
+  entries: Record<string, string>;
 };
 
-const AgeGrid = ({ totalMonthsLived, maxYears }: AgeGridProps) => {
+const AgeGrid = ({
+  totalMonthsLived,
+  maxYears,
+  onSelectMonth,
+  selectedMonth,
+  entries,
+}: AgeGridProps) => {
   const totalYears = maxYears;
   const clampedMonths = Math.max(
     0,
@@ -451,6 +597,9 @@ const AgeGrid = ({ totalMonthsLived, maxYears }: AgeGridProps) => {
                   yearNumber={yearNumber}
                   yearIndex={yearNumber - 1}
                   totalMonthsLived={clampedMonths}
+                  onSelectMonth={onSelectMonth}
+                  selectedMonth={selectedMonth}
+                  entries={entries}
                 />
               ))}
             </div>
@@ -465,30 +614,54 @@ const YearRow = ({
   yearNumber,
   yearIndex,
   totalMonthsLived,
+  onSelectMonth,
+  selectedMonth,
+  entries,
 }: {
   yearNumber: number;
   yearIndex: number;
   totalMonthsLived: number;
+  onSelectMonth: (year: number, month: number) => void;
+  selectedMonth: { year: number; month: number } | null;
+  entries: Record<string, string>;
 }) => {
   const months = Array.from({ length: 12 }, (_, idx) => idx);
-  const monthsBeforeYear = yearIndex * 12;
-  const monthsFilled = Math.min(
-    Math.max(totalMonthsLived - monthsBeforeYear, 0),
-    12
-  );
 
   return (
     <div className="grid grid-cols-12 gap-px">
       {months.map((monthIndex) => {
-        const isLived = monthIndex < monthsFilled;
+        const displayMonth = monthIndex + 1;
+        const key = `${yearNumber}-${displayMonth}`;
+        const hasEntry = Boolean(entries[key]?.trim());
+        const isSelected =
+          selectedMonth?.year === yearNumber &&
+          selectedMonth?.month === displayMonth;
+        const monthsBeforeCell = yearIndex * 12 + displayMonth;
+        const isLived = monthsBeforeCell <= totalMonthsLived;
+        const baseClasses =
+          "h-3 w-3 rounded-[2px] transition sm:h-4 sm:w-4 focus:outline-none";
+
         return (
-          <span
-            key={`${yearNumber}-${monthIndex}`}
-            className={`h-3 w-3 rounded-[2px] transition sm:h-4 sm:w-4 ${
-              isLived
-                ? "bg-[var(--foreground)]"
-                : "bg-[color-mix(in_srgb,var(--foreground)_20%,transparent)]"
+          <button
+            type="button"
+            key={key}
+            onClick={() => onSelectMonth(yearNumber, displayMonth)}
+            className={`${baseClasses} ${
+              isSelected
+                ? "bg-[var(--foreground)] ring-2 ring-[color-mix(in_srgb,var(--foreground)_40%,transparent)]"
+                : hasEntry
+                  ? "bg-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
+                  : isLived
+                    ? "bg-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:bg-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
+                    : "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] opacity-70 hover:opacity-100"
             }`}
+            aria-label={`Year ${yearNumber}, month ${displayMonth}`}
+            aria-pressed={isSelected}
+            title={
+              hasEntry
+                ? "Contains notes. Click to view or edit."
+                : "Click to add notes."
+            }
           />
         );
       })}
