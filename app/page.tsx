@@ -1151,7 +1151,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
             }`}
           >
-            Productivity
+            Tracker
           </button>
           <button
             type="button"
@@ -1494,8 +1494,8 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 
           {view === "productivity" && (
             <section className="mt-8 grid gap-8 text-left lg:grid-cols-[1.2fr_1fr]">
-              <div className="flex flex-col rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_10%,transparent)] bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] p-6">
-                <div className="mb-6 flex flex-wrap items-center justify-center gap-3 text-3xl font-light">
+              <div className="flex flex-col rounded-3xl bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] p-6">
+                <div className="mb-6 flex flex-wrap items-center justify-start gap-3 text-3xl font-light">
                   <input
                     type="number"
                     value={productivityYear}
@@ -1506,7 +1506,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     }
                     className="w-28 border-b border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] bg-transparent px-3 text-3xl text-[var(--foreground)] outline-none focus:border-[var(--foreground)] caret-[var(--foreground)] text-center"
                   />
-                  <span>Productivity tracker</span>
+                  <span>Productivity tracking</span>
                 </div>
                 <div className="mb-6">
                   <ProductivityLegend />
