@@ -44,9 +44,9 @@ const WEEKDAY_SHORT_LABELS: string[] = Array.from({ length: 7 }, (_, day) =>
   })
 );
 
-const TIME_OPTIONS: string[] = Array.from({ length: 24 * 4 }, (_, index) => {
-  const hours = Math.floor(index / 4);
-  const minutes = (index % 4) * 15;
+const TIME_OPTIONS: string[] = Array.from({ length: 24 * 2 }, (_, index) => {
+  const hours = Math.floor(index / 2);
+  const minutes = (index % 2) * 30;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 });
 
@@ -777,6 +777,11 @@ export default function Home() {
                   ⚙️
                 </button>
               </div>
+              <datalist id="time-select-options">
+                {TIME_OPTIONS.map((time) => (
+                  <option key={`time-option-${time}`} value={time} />
+                ))}
+              </datalist>
 
               {isEditingFocus && (
                 <div className="mx-auto mt-6 max-w-3xl rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_10%,transparent)] bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] p-6 text-left backdrop-blur">
@@ -2468,35 +2473,29 @@ const WeeklySchedule = ({
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
                   Start
-                  <select
+                  <input
+                    type="time"
+                    step={1800}
+                    list="time-select-options"
                     value={activeEntry.data.time ?? TIME_OPTIONS[0]}
                     onChange={(event) =>
                       handleActiveFieldChange("time", event.target.value)
                     }
                     className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-3 py-1.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
-                  >
-                    {TIME_OPTIONS.map((time) => (
-                      <option key={`start-${time}`} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </label>
                 <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
                   End
-                  <select
+                  <input
+                    type="time"
+                    step={1800}
+                    list="time-select-options"
                     value={activeEntry.data.endTime ?? TIME_OPTIONS[0]}
                     onChange={(event) =>
                       handleActiveFieldChange("endTime", event.target.value)
                     }
                     className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-3 py-1.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
-                  >
-                    {TIME_OPTIONS.map((time) => (
-                      <option key={`end-${time}`} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </label>
               </div>
               <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
