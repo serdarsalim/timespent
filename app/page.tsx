@@ -4,6 +4,19 @@ import { useEffect, useState, type ChangeEvent } from "react";
 
 type Theme = "light" | "dark";
 
+type FocusArea = {
+  id: string;
+  name: string;
+  hours: string;
+};
+
+const defaultFocusAreas: FocusArea[] = [
+  { id: "sleep", name: "Sleep", hours: "8" },
+  { id: "eating", name: "Eating", hours: "2" },
+  { id: "body", name: "Body functions", hours: "1" },
+  { id: "work", name: "Work", hours: "8" },
+];
+
 const determineTheme = (): Theme => {
   const hour = new Date().getHours();
   return hour >= 7 && hour < 19 ? "light" : "dark";
@@ -13,6 +26,8 @@ export default function Home() {
   const [age, setAge] = useState<string>("30");
   const [theme, setTheme] = useState<Theme>("light");
   const [showGrid, setShowGrid] = useState(false);
+  const [focusAreas, setFocusAreas] = useState<FocusArea[]>(defaultFocusAreas);
+  const [isEditingFocus, setIsEditingFocus] = useState(false);
 
   useEffect(() => {
     const autoTheme = determineTheme();
@@ -41,6 +56,33 @@ export default function Home() {
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  };
+
+  const toggleFocusEditor = () => {
+    setIsEditingFocus((prev) => !prev);
+  };
+
+  const updateFocusArea = (
+    id: string,
+    field: "name" | "hours",
+    value: string
+  ) => {
+    setFocusAreas((areas) =>
+      areas.map((area) =>
+        area.id === id ? { ...area, [field]: value } : area
+      )
+    );
+  };
+
+  const addFocusArea = () => {
+    setFocusAreas((areas) => [
+      ...areas,
+      {
+        id: `focus-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: "New focus",
+        hours: "1",
+      },
+    ]);
   };
 
   return (
@@ -76,6 +118,76 @@ export default function Home() {
               ↵
             </button>
           </div>
+
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-base">
+            {focusAreas.map((area) => (
+              <button
+                key={area.id}
+                type="button"
+                className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-5 py-2 text-sm uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-[var(--foreground)]"
+              >
+                {area.name}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={toggleFocusEditor}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] text-xl text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-[var(--foreground)]"
+              aria-label="Configure focus areas"
+            >
+              ⚙️
+            </button>
+          </div>
+
+          {isEditingFocus && (
+            <div className="mx-auto mt-6 max-w-3xl rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_10%,transparent)] bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] p-6 text-left backdrop-blur">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm uppercase tracking-[0.25em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                  Daily breakdown
+                </p>
+                <button
+                  type="button"
+                  onClick={addFocusArea}
+                  className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-3 py-1 text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
+                >
+                  + Add pill
+                </button>
+              </div>
+              <div className="space-y-3">
+                {focusAreas.map((area) => (
+                  <div
+                    key={`editor-${area.id}`}
+                    className="flex flex-wrap gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] px-4 py-3"
+                  >
+                    <label className="flex flex-1 min-w-[140px] flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                      Name
+                      <input
+                        type="text"
+                        value={area.name}
+                        onChange={(event) =>
+                          updateFocusArea(area.id, "name", event.target.value)
+                        }
+                        className="mt-1 border-b border-[color-mix(in_srgb,var(--foreground)_40%,transparent)] bg-transparent py-1 text-base font-light text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+                      />
+                    </label>
+                    <label className="flex w-32 flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                      Hours / day
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        value={area.hours}
+                        onChange={(event) =>
+                          updateFocusArea(area.id, "hours", event.target.value)
+                        }
+                        className="mt-1 border-b border-[color-mix(in_srgb,var(--foreground)_40%,transparent)] bg-transparent py-1 text-base font-light text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {showGrid && resolvedAge > 0 && (
             <div className="mt-12 flex justify-center">
