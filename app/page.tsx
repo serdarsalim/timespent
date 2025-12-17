@@ -2072,23 +2072,26 @@ const ProductivityGrid = ({
     });
   };
 
-  const handleWeekCycle = (weekNumber: number) => {
+  const handleWeekCycle = (weekNumber: number, hasDayScores: boolean) => {
     const key = `week-${year}-${weekNumber}`;
     setSelectedWeek(weekNumber);
 
-    setRatings((prev) => {
-      const current = prev[key];
-      let next: number | null;
-      if (current === undefined || current === null) {
-        next = 0;
-      } else if (current >= PRODUCTIVITY_SCALE.length - 1) {
-        next = null;
-      } else {
-        next = (current + 1) as number;
-      }
+    // Only cycle rating if there are no day scores
+    if (!hasDayScores) {
+      setRatings((prev) => {
+        const current = prev[key];
+        let next: number | null;
+        if (current === undefined || current === null) {
+          next = 0;
+        } else if (current >= PRODUCTIVITY_SCALE.length - 1) {
+          next = null;
+        } else {
+          next = (current + 1) as number;
+        }
 
-      return { ...prev, [key]: next };
-    });
+        return { ...prev, [key]: next };
+      });
+    }
   };
 
   const daysInMonth = (targetYear: number, monthIndex: number) => {
@@ -2319,7 +2322,7 @@ const ProductivityGrid = ({
                     ? (manualScoreRaw as number)
                     : null;
                 const displayValue = hasDayScores
-                  ? dayAverage
+                  ? ""
                   : manualScore ?? "";
                 const colorIndex = hasDayScores
                   ? Math.max(
@@ -2340,7 +2343,7 @@ const ProductivityGrid = ({
                   <div key={`week-card-${week.weekNumber}`}>
                     <button
                       type="button"
-                      onClick={() => handleWeekCycle(week.weekNumber)}
+                      onClick={() => handleWeekCycle(week.weekNumber, hasDayScores)}
                       onKeyDown={(e) => {
                         if (!hasDayScores && (e.key === "Delete" || e.key === "Backspace")) {
                           e.preventDefault();
@@ -2348,17 +2351,16 @@ const ProductivityGrid = ({
                           setRatings((prev) => ({ ...prev, [key]: null }));
                         }
                       }}
-                      disabled={hasDayScores}
-                      className={`h-4 w-full rounded-sm border text-[10px] font-semibold text-transparent transition focus:text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] ${
+                      className={`flex h-4 w-full items-center justify-center rounded-sm border text-[10px] font-semibold text-transparent transition focus:text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] ${
                         hasDayScores
-                          ? "cursor-not-allowed opacity-80"
+                          ? "cursor-pointer"
                           : "hover:opacity-90"
                       } ${scaleClass} border-[color-mix(in_srgb,var(--foreground)_12%,transparent)]`}
-                      title={`${week.rangeLabel}`}
+                      title={`${week.rangeLabel}${hasDayScores ? " (rating locked from daily view)" : ""}`}
                       aria-label={
                         hasDayScores
-                          ? `Week ${week.weekNumber} ${week.rangeLabel}, averaged score ${dayAverage}`
-                          : `Week ${week.weekNumber} ${week.rangeLabel}, current score ${manualScore ?? "unset"}`
+                          ? `Week ${week.weekNumber} ${week.rangeLabel}, averaged score ${dayAverage}, click to select week`
+                          : `Week ${week.weekNumber} ${week.rangeLabel}, current score ${manualScore ?? "unset"}, click to cycle rating`
                       }
                     >
                       {displayValue}
