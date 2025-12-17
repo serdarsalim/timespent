@@ -2129,34 +2129,15 @@ const ProductivityGrid = ({
           );
         })}
       </div>
-      <div className="mt-2 space-y-1">
+      <div className="mt-2">
         {days.map((dayOfMonth) => {
-          // Find which week this day belongs to (check first valid month)
-          let dayWeekNumber = null;
-          for (const monthIndex of months) {
-            if (dayOfMonth <= daysInMonth(year, monthIndex)) {
-              const weekForDay = weeks.find((week) =>
-                week.dayKeys.some((dayKey) => {
-                  const [y, m, d] = dayKey.split("-").map(Number);
-                  return y === year && m === monthIndex + 1 && d === dayOfMonth;
-                })
-              );
-              if (weekForDay) {
-                dayWeekNumber = weekForDay.weekNumber;
-                break;
-              }
-            }
-          }
-          const rowBgClass = dayWeekNumber && dayWeekNumber % 2 === 0
-            ? "bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)]"
-            : "";
-
           return (
           <div
             key={`row-${dayOfMonth}`}
-            className={`grid items-center gap-2 -mx-6 px-6 ${rowBgClass}`}
+            className="grid items-center"
             style={{
               gridTemplateColumns: `${dayColumnWidth} repeat(12, minmax(0, 1fr))`,
+              columnGap: "0.5rem",
             }}
           >
             <span className="text-right text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
@@ -2182,6 +2163,33 @@ const ProductivityGrid = ({
                 );
               }
 
+              // Week border logic (all months)
+              let weekBorderClass = "";
+              // Find the week this day belongs to
+              const currentWeek = weeks.find((week) =>
+                week.dayKeys.includes(`${year}-${monthIndex + 1}-${dayOfMonth}`)
+              );
+
+              if (currentWeek) {
+                // Check if this is the first day in this month that belongs to this week
+                const isFirstInMonth = !currentWeek.dayKeys.some(dayKey => {
+                  const [y, m, d] = dayKey.split("-").map(Number);
+                  return y === year && m === monthIndex + 1 && d! < dayOfMonth;
+                });
+
+                // Check if next day in this month is in same week
+                const nextDayInWeek = dayOfMonth < daysInMonth(year, monthIndex) && currentWeek.dayKeys.includes(`${year}-${monthIndex + 1}-${dayOfMonth + 1}`);
+
+                // Top border: first day of week (stronger) or between days (visible divider)
+                const borderTop = isFirstInMonth ? "border-t border-t-gray-400" : "border-t border-t-gray-300";
+                // Bottom border: last day of week (stronger) or between days (visible divider)
+                const borderBottom = !nextDayInWeek ? "border-b border-b-gray-400" : "border-b border-b-gray-300";
+                // Left and right borders: always on for week grouping
+                const borderSides = "border-l border-r border-l-gray-400 border-r-gray-400";
+
+                weekBorderClass = `${borderTop} ${borderBottom} ${borderSides}`;
+              }
+
               const today = new Date();
               const isToday =
                 today.getFullYear() === year &&
@@ -2193,14 +2201,14 @@ const ProductivityGrid = ({
                   type="button"
                   key={key}
                   onClick={() => handleCycle(monthIndex, dayOfMonth)}
-                  className={`h-4 w-full rounded-sm border text-[10px] font-semibold text-transparent transition focus:text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] ${
+                  className={`h-4 w-full -mb-px text-[10px] font-semibold text-transparent transition focus:text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] ${weekBorderClass} ${
                     hasValue
                       ? scale.color
                       : "bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)]"
                   } ${
                     isToday
-                      ? "border-[color-mix(in_srgb,var(--foreground)_40%,transparent)] shadow-[0_0_10px_rgba(0,0,0,0.2)]"
-                      : "border-[color-mix(in_srgb,var(--foreground)_12%,transparent)]"
+                      ? "ring-2 ring-blue-500 shadow-[0_0_10px_rgba(0,0,0,0.2)]"
+                      : ""
                   }`}
                   aria-label={`Day ${dayOfMonth} of ${new Date(2020, monthIndex).toLocaleString(undefined, {
                     month: "long",
