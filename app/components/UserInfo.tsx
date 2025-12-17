@@ -10,7 +10,11 @@ type Session = {
   };
 } | null;
 
-export function UserInfo() {
+type UserInfoProps = {
+  showLabel?: boolean;
+};
+
+export function UserInfo({ showLabel = false }: UserInfoProps) {
   const [session, setSession] = useState<Session>(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +42,12 @@ export function UserInfo() {
   }
 
   return (
-    <div className="flex items-center gap-4 text-sm">
+    <div className="flex items-center gap-3 text-sm">
+      {showLabel && (
+        <span className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+          Signed in as
+        </span>
+      )}
       <span className="text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
         {session.user.email}
       </span>

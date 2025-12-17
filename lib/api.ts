@@ -297,7 +297,17 @@ export async function saveWeeklyNotes(weeklyNotes: Record<string, string>) {
       return null
     }
 
-    const data = await response.json()
+    if (!response.ok) {
+      console.error('Error saving weekly notes:', response.status, response.statusText)
+      return null
+    }
+
+    const data = await response.json().catch(() => null)
+    if (!data || !Array.isArray(data.weeklyNotes)) {
+      console.error('Invalid weekly notes response payload', data)
+      return null
+    }
+
     return transformWeeklyNotesFromDB(data.weeklyNotes)
   } catch (error) {
     console.error('Error saving weekly notes:', error)
@@ -340,7 +350,17 @@ export async function saveMonthEntries(monthEntries: Record<string, string>) {
       return null
     }
 
-    const data = await response.json()
+    if (!response.ok) {
+      console.error('Error saving month entries:', response.status, response.statusText)
+      return null
+    }
+
+    const data = await response.json().catch(() => null)
+    if (!data || !Array.isArray(data.monthEntries)) {
+      console.error('Invalid month entries response payload', data)
+      return null
+    }
+
     return transformMonthEntriesFromDB(data.monthEntries)
   } catch (error) {
     console.error('Error saving month entries:', error)

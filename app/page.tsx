@@ -222,7 +222,7 @@ const TINYMCE_CDN =
   "https://cdnjs.cloudflare.com/ajax/libs/tinymce/8.1.2/tinymce.min.js";
 const PRODUCTIVITY_SCALE = [
   { value: 0, label: "Low", color: "bg-[#fefae6]" },
-  { value: 1, label: "Medium", color: "bg-[#d9f0a3]" },
+  { value: 1, label: "Medium", color: "bg-[#e5f5b8]" },
   { value: 2, label: "High", color: "bg-[#a6d96a]" },
   // { value: 3, label: ">75%", color: "bg-[#66bd63]" }, // Hidden for now
 ];
@@ -419,6 +419,21 @@ export default function Home() {
   const goalsSaveTimeoutRef = useRef<number | null>(null);
   const isSavingGoalsRef = useRef(false);
   const lastServerSavedGoalsRef = useRef<string | null>(null);
+  const lastProcessedMonthEntriesRef = useRef<string | null>(null);
+  const pendingMonthEntriesRef = useRef<Record<string, string>>({});
+  const monthEntriesSaveTimeoutRef = useRef<number | null>(null);
+  const isSavingMonthEntriesRef = useRef(false);
+  const lastServerSavedMonthEntriesRef = useRef<string | null>(null);
+  const lastProcessedProductivityRef = useRef<string | null>(null);
+  const pendingProductivityRef = useRef<Record<string, number | null>>({});
+  const productivitySaveTimeoutRef = useRef<number | null>(null);
+  const isSavingProductivityRef = useRef(false);
+  const lastServerSavedProductivityRef = useRef<string | null>(null);
+  const lastProcessedWeeklyNotesRef = useRef<string | null>(null);
+  const pendingWeeklyNotesRef = useRef<Record<string, string>>({});
+  const weeklyNotesSaveTimeoutRef = useRef<number | null>(null);
+  const isSavingWeeklyNotesRef = useRef(false);
+  const lastServerSavedWeeklyNotesRef = useRef<string | null>(null);
 
   const triggerScheduleSave = useCallback(() => {
     if (!userEmail) {
@@ -502,6 +517,129 @@ export default function Home() {
     })();
   }, [userEmail]);
 
+  const triggerMonthEntriesSave = useCallback(() => {
+    if (!userEmail) {
+      return;
+    }
+
+    const pendingSerialized = JSON.stringify(pendingMonthEntriesRef.current ?? {});
+    if (lastServerSavedMonthEntriesRef.current === pendingSerialized) {
+      return;
+    }
+
+    if (isSavingMonthEntriesRef.current) {
+      return;
+    }
+
+    const dataToSave = pendingMonthEntriesRef.current;
+    const serializedToSave = pendingSerialized;
+
+    isSavingMonthEntriesRef.current = true;
+    void (async () => {
+      try {
+        await saveMonthEntries(dataToSave);
+        lastServerSavedMonthEntriesRef.current = serializedToSave;
+      } catch (error) {
+        console.error("Failed to persist month entries", error);
+      } finally {
+        isSavingMonthEntriesRef.current = false;
+        const latestSerialized = JSON.stringify(pendingMonthEntriesRef.current ?? {});
+        if (
+          userEmail &&
+          latestSerialized !== serializedToSave &&
+          !monthEntriesSaveTimeoutRef.current
+        ) {
+          monthEntriesSaveTimeoutRef.current = window.setTimeout(() => {
+            monthEntriesSaveTimeoutRef.current = null;
+            triggerMonthEntriesSave();
+          }, 200);
+        }
+      }
+    })();
+  }, [userEmail]);
+
+  const triggerProductivitySave = useCallback(() => {
+    if (!userEmail) {
+      return;
+    }
+
+    const pendingSerialized = JSON.stringify(pendingProductivityRef.current ?? {});
+    if (lastServerSavedProductivityRef.current === pendingSerialized) {
+      return;
+    }
+
+    if (isSavingProductivityRef.current) {
+      return;
+    }
+
+    const dataToSave = pendingProductivityRef.current;
+    const serializedToSave = pendingSerialized;
+
+    isSavingProductivityRef.current = true;
+    void (async () => {
+      try {
+        await saveProductivity(dataToSave);
+        lastServerSavedProductivityRef.current = serializedToSave;
+      } catch (error) {
+        console.error("Failed to persist productivity ratings", error);
+      } finally {
+        isSavingProductivityRef.current = false;
+        const latestSerialized = JSON.stringify(pendingProductivityRef.current ?? {});
+        if (
+          userEmail &&
+          latestSerialized !== serializedToSave &&
+          !productivitySaveTimeoutRef.current
+        ) {
+          productivitySaveTimeoutRef.current = window.setTimeout(() => {
+            productivitySaveTimeoutRef.current = null;
+            triggerProductivitySave();
+          }, 200);
+        }
+      }
+    })();
+  }, [userEmail]);
+
+  const triggerWeeklyNotesSave = useCallback(() => {
+    if (!userEmail) {
+      return;
+    }
+
+    const pendingSerialized = JSON.stringify(pendingWeeklyNotesRef.current ?? {});
+    if (lastServerSavedWeeklyNotesRef.current === pendingSerialized) {
+      return;
+    }
+
+    if (isSavingWeeklyNotesRef.current) {
+      return;
+    }
+
+    const dataToSave = pendingWeeklyNotesRef.current;
+    const serializedToSave = pendingSerialized;
+
+    isSavingWeeklyNotesRef.current = true;
+    void (async () => {
+      try {
+        await saveWeeklyNotes(dataToSave);
+        lastServerSavedWeeklyNotesRef.current = serializedToSave;
+      } catch (error) {
+        console.error("Failed to persist weekly notes", error);
+      } finally {
+        isSavingWeeklyNotesRef.current = false;
+        const latestSerialized = JSON.stringify(pendingWeeklyNotesRef.current ?? {});
+        if (
+          userEmail &&
+          latestSerialized !== serializedToSave &&
+          !weeklyNotesSaveTimeoutRef.current
+        ) {
+          weeklyNotesSaveTimeoutRef.current = window.setTimeout(() => {
+            weeklyNotesSaveTimeoutRef.current = null;
+            triggerWeeklyNotesSave();
+          }, 200);
+        }
+      }
+    })();
+  }, [userEmail]);
+
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
@@ -509,8 +647,39 @@ export default function Home() {
   useEffect(() => {
     lastServerSavedScheduleRef.current = null;
     pendingScheduleRef.current = {};
+    lastProcessedScheduleRef.current = null;
+    if (scheduleSaveTimeoutRef.current) {
+      window.clearTimeout(scheduleSaveTimeoutRef.current);
+      scheduleSaveTimeoutRef.current = null;
+    }
     lastServerSavedGoalsRef.current = null;
     pendingGoalsRef.current = [];
+    lastProcessedGoalsRef.current = null;
+    if (goalsSaveTimeoutRef.current) {
+      window.clearTimeout(goalsSaveTimeoutRef.current);
+      goalsSaveTimeoutRef.current = null;
+    }
+    lastServerSavedMonthEntriesRef.current = null;
+    pendingMonthEntriesRef.current = {};
+    lastProcessedMonthEntriesRef.current = null;
+    if (monthEntriesSaveTimeoutRef.current) {
+      window.clearTimeout(monthEntriesSaveTimeoutRef.current);
+      monthEntriesSaveTimeoutRef.current = null;
+    }
+    lastServerSavedProductivityRef.current = null;
+    pendingProductivityRef.current = {};
+    lastProcessedProductivityRef.current = null;
+    if (productivitySaveTimeoutRef.current) {
+      window.clearTimeout(productivitySaveTimeoutRef.current);
+      productivitySaveTimeoutRef.current = null;
+    }
+    lastServerSavedWeeklyNotesRef.current = null;
+    pendingWeeklyNotesRef.current = {};
+    lastProcessedWeeklyNotesRef.current = null;
+    if (weeklyNotesSaveTimeoutRef.current) {
+      window.clearTimeout(weeklyNotesSaveTimeoutRef.current);
+      weeklyNotesSaveTimeoutRef.current = null;
+    }
   }, [userEmail]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -671,40 +840,76 @@ export default function Home() {
   useEffect(() => {
     if (!isHydrated) return;
 
-    try {
-      // Save to localStorage as backup
-      window.localStorage.setItem(
-        "timespent-life-entries",
-        JSON.stringify(monthEntries)
-      );
-
-      // Save to database only if logged in
-      if (userEmail) {
-        saveMonthEntries(monthEntries);
-      }
-    } catch (error) {
-      console.error("Failed to save month entries", error);
+    const serialized = JSON.stringify(monthEntries);
+    if (lastProcessedMonthEntriesRef.current === serialized) {
+      return;
     }
-  }, [monthEntries, isHydrated, userEmail]);
+    lastProcessedMonthEntriesRef.current = serialized;
+
+    if (!userEmail) {
+      try {
+        window.localStorage.setItem("timespent-life-entries", serialized);
+      } catch (error) {
+        console.error("Failed to cache month entries", error);
+      }
+      return;
+    }
+
+    pendingMonthEntriesRef.current = monthEntries;
+
+    if (monthEntriesSaveTimeoutRef.current) {
+      window.clearTimeout(monthEntriesSaveTimeoutRef.current);
+    }
+
+    monthEntriesSaveTimeoutRef.current = window.setTimeout(() => {
+      monthEntriesSaveTimeoutRef.current = null;
+      triggerMonthEntriesSave();
+    }, 600);
+
+    return () => {
+      if (monthEntriesSaveTimeoutRef.current) {
+        window.clearTimeout(monthEntriesSaveTimeoutRef.current);
+        monthEntriesSaveTimeoutRef.current = null;
+      }
+    };
+  }, [monthEntries, isHydrated, userEmail, triggerMonthEntriesSave]);
 
   useEffect(() => {
     if (!isHydrated) return;
 
-    try {
-      // Save to localStorage as backup
-      window.localStorage.setItem(
-        "timespent-productivity-ratings",
-        JSON.stringify(productivityRatings)
-      );
-
-      // Save to database only if logged in
-      if (userEmail) {
-        saveProductivity(productivityRatings);
-      }
-    } catch (error) {
-      console.error("Failed to save productivity ratings", error);
+    const serialized = JSON.stringify(productivityRatings);
+    if (lastProcessedProductivityRef.current === serialized) {
+      return;
     }
-  }, [productivityRatings, isHydrated, userEmail]);
+    lastProcessedProductivityRef.current = serialized;
+
+    if (!userEmail) {
+      try {
+        window.localStorage.setItem("timespent-productivity-ratings", serialized);
+      } catch (error) {
+        console.error("Failed to cache productivity ratings", error);
+      }
+      return;
+    }
+
+    pendingProductivityRef.current = productivityRatings;
+
+    if (productivitySaveTimeoutRef.current) {
+      window.clearTimeout(productivitySaveTimeoutRef.current);
+    }
+
+    productivitySaveTimeoutRef.current = window.setTimeout(() => {
+      productivitySaveTimeoutRef.current = null;
+      triggerProductivitySave();
+    }, 600);
+
+    return () => {
+      if (productivitySaveTimeoutRef.current) {
+        window.clearTimeout(productivitySaveTimeoutRef.current);
+        productivitySaveTimeoutRef.current = null;
+      }
+    };
+  }, [productivityRatings, isHydrated, userEmail, triggerProductivitySave]);
 
   useEffect(() => {
     try {
@@ -825,21 +1030,39 @@ export default function Home() {
   useEffect(() => {
     if (!isHydrated) return;
 
-    try {
-      // Save to localStorage as backup
-      window.localStorage.setItem(
-        "timespent-weekly-notes",
-        JSON.stringify(weeklyNotes)
-      );
-
-      // Save to database only if logged in
-      if (userEmail) {
-        saveWeeklyNotes(weeklyNotes);
-      }
-    } catch (error) {
-      console.error("Failed to save weekly notes", error);
+    const serialized = JSON.stringify(weeklyNotes);
+    if (lastProcessedWeeklyNotesRef.current === serialized) {
+      return;
     }
-  }, [weeklyNotes, isHydrated, userEmail]);
+    lastProcessedWeeklyNotesRef.current = serialized;
+
+    if (!userEmail) {
+      try {
+        window.localStorage.setItem("timespent-weekly-notes", serialized);
+      } catch (error) {
+        console.error("Failed to cache weekly notes", error);
+      }
+      return;
+    }
+
+    pendingWeeklyNotesRef.current = weeklyNotes;
+
+    if (weeklyNotesSaveTimeoutRef.current) {
+      window.clearTimeout(weeklyNotesSaveTimeoutRef.current);
+    }
+
+    weeklyNotesSaveTimeoutRef.current = window.setTimeout(() => {
+      weeklyNotesSaveTimeoutRef.current = null;
+      triggerWeeklyNotesSave();
+    }, 600);
+
+    return () => {
+      if (weeklyNotesSaveTimeoutRef.current) {
+        window.clearTimeout(weeklyNotesSaveTimeoutRef.current);
+        weeklyNotesSaveTimeoutRef.current = null;
+      }
+    };
+  }, [weeklyNotes, isHydrated, userEmail, triggerWeeklyNotesSave]);
 
   // Set current week as selected by default when viewing productivity tracker
   useEffect(() => {
@@ -1501,33 +1724,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             </button>
           </nav>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setIsEditingProfile((prev) => !prev);
-            }}
-            className={`flex h-10 w-10 items-center justify-center rounded-full transition ${
-              isProfileEditorVisible
-                ? "bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
-                : "hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
-            }`}
-            aria-label="Toggle profile settings"
-            aria-pressed={isProfileEditorVisible}
-          >
-            ⚙️
-          </button>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="flex items-center justify-center rounded-full p-2 text-lg transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
-            aria-label="Toggle dark mode"
-          >
-            <span role="img" aria-hidden="true">
-              {theme === "light" ? "🌙" : "☀️"}
-            </span>
-          </button>
-        </div>
       </header>
       <main className="flex flex-1 items-start justify-center px-4">
         <div className="w-full py-2 text-center">
@@ -2017,25 +2213,57 @@ const goalStatusBadge = (status: KeyResultStatus) => {
         </div>
       )}
 
-      <footer className="mt-24 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] px-6 py-4 text-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
-            {APP_NAME} · Minimal goal, productivity, and schedule tracker
-          </p>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/about"
-              className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] transition hover:text-foreground"
-            >
-              About
-            </Link>
-            <Link
-              href="/terms"
-              className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] transition hover:text-foreground"
-            >
-              Terms
-            </Link>
-            <UserInfo />
+      <footer className="mt-24 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] px-6 py-6 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-8">
+          <div className="min-w-[220px] text-center sm:text-left">
+            <p className="text-base font-medium text-foreground">{APP_NAME}</p>
+            <p className="text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+              Minimal goal, productivity, and schedule tracker
+            </p>
+          </div>
+
+          <div className="flex flex-1 justify-center">
+            <div className="flex flex-col items-center gap-1">
+              <UserInfo showLabel />
+            </div>
+          </div>
+
+          <div className="flex min-w-[220px] flex-col items-end gap-3">
+            <div className="flex items-center gap-4 text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+              <Link href="/about" className="transition hover:text-foreground">
+                About
+              </Link>
+              <Link href="/terms" className="transition hover:text-foreground">
+                Terms
+              </Link>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditingProfile((prev) => !prev);
+                }}
+                className={`flex h-10 w-10 items-center justify-center rounded-full border transition ${
+                  isProfileEditorVisible
+                    ? "border-[color-mix(in_srgb,var(--foreground)_40%,transparent)]"
+                    : "border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] hover:border-foreground"
+                }`}
+                aria-label="Toggle profile settings"
+                aria-pressed={isProfileEditorVisible}
+              >
+                ⚙️
+              </button>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] text-lg transition hover:border-foreground"
+                aria-label="Toggle dark mode"
+              >
+                <span role="img" aria-hidden="true">
+                  {theme === "light" ? "🌙" : "☀️"}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </footer>
