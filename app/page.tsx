@@ -409,6 +409,7 @@ export default function Home() {
   } | null>(null);
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, string>>({});
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const lastProcessedScheduleRef = useRef<string | null>(null);
   const pendingScheduleRef = useRef<Record<string, ScheduleEntry[]>>({});
   const scheduleSaveTimeoutRef = useRef<number | null>(null);
@@ -437,7 +438,7 @@ export default function Home() {
   const hasLoadedServerDataRef = useRef(false);
 
   const triggerScheduleSave = useCallback(() => {
-    if (!userEmail) {
+    if (!userEmail || isDemoMode) {
       return;
     }
 
@@ -465,6 +466,7 @@ export default function Home() {
         const latestSerialized = JSON.stringify(pendingScheduleRef.current ?? {});
         if (
           userEmail &&
+          !isDemoMode &&
           latestSerialized !== serializedToSave &&
           !scheduleSaveTimeoutRef.current
         ) {
@@ -475,10 +477,10 @@ export default function Home() {
         }
       }
     })();
-  }, [userEmail]);
+  }, [userEmail, isDemoMode]);
 
   const triggerGoalsSave = useCallback(() => {
-    if (!userEmail) {
+    if (!userEmail || isDemoMode) {
       return;
     }
 
@@ -506,6 +508,7 @@ export default function Home() {
         const latestSerialized = JSON.stringify(pendingGoalsRef.current ?? []);
         if (
           userEmail &&
+          !isDemoMode &&
           latestSerialized !== serializedToSave &&
           !goalsSaveTimeoutRef.current
         ) {
@@ -516,10 +519,10 @@ export default function Home() {
         }
       }
     })();
-  }, [userEmail]);
+  }, [userEmail, isDemoMode]);
 
   const triggerMonthEntriesSave = useCallback(() => {
-    if (!userEmail) {
+    if (!userEmail || isDemoMode) {
       return;
     }
 
@@ -547,6 +550,7 @@ export default function Home() {
         const latestSerialized = JSON.stringify(pendingMonthEntriesRef.current ?? {});
         if (
           userEmail &&
+          !isDemoMode &&
           latestSerialized !== serializedToSave &&
           !monthEntriesSaveTimeoutRef.current
         ) {
@@ -557,10 +561,10 @@ export default function Home() {
         }
       }
     })();
-  }, [userEmail]);
+  }, [userEmail, isDemoMode]);
 
   const triggerProductivitySave = useCallback(() => {
-    if (!userEmail) {
+    if (!userEmail || isDemoMode) {
       return;
     }
 
@@ -588,6 +592,7 @@ export default function Home() {
         const latestSerialized = JSON.stringify(pendingProductivityRef.current ?? {});
         if (
           userEmail &&
+          !isDemoMode &&
           latestSerialized !== serializedToSave &&
           !productivitySaveTimeoutRef.current
         ) {
@@ -598,10 +603,10 @@ export default function Home() {
         }
       }
     })();
-  }, [userEmail]);
+  }, [userEmail, isDemoMode]);
 
   const triggerWeeklyNotesSave = useCallback(() => {
-    if (!userEmail) {
+    if (!userEmail || isDemoMode) {
       return;
     }
 
@@ -629,6 +634,7 @@ export default function Home() {
         const latestSerialized = JSON.stringify(pendingWeeklyNotesRef.current ?? {});
         if (
           userEmail &&
+          !isDemoMode &&
           latestSerialized !== serializedToSave &&
           !weeklyNotesSaveTimeoutRef.current
         ) {
@@ -639,7 +645,7 @@ export default function Home() {
         }
       }
     })();
-  }, [userEmail]);
+  }, [userEmail, isDemoMode]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -697,6 +703,7 @@ export default function Home() {
         setUserEmail(session?.user?.email || null);
 
         if (isLoggedIn) {
+          setIsDemoMode(false);
           // Logged in - load from database
           await migrateFromLocalStorage();
           cleanupOldScheduleEntries();
@@ -725,6 +732,7 @@ export default function Home() {
           }
           hasLoadedServerDataRef.current = true;
         } else {
+          setIsDemoMode(true);
           // Guest - load demo data
           setGoals(demoGoals);
           setScheduleEntries(normalizeScheduleEntryColors(demoScheduleEntries));
@@ -801,7 +809,7 @@ export default function Home() {
 
       // Save to database only if logged in and data loaded
       if (userEmail) {
-        if (!hasLoadedServerDataRef.current) {
+        if (!hasLoadedServerDataRef.current || isDemoMode) {
           return;
         }
         saveProfile({
@@ -814,7 +822,7 @@ export default function Home() {
     } catch (error) {
       console.error("Failed to save profile", error);
     }
-  }, [personName, dateOfBirth, email, weekStartDay, recentYears, isHydrated, userEmail]);
+  }, [personName, dateOfBirth, email, weekStartDay, recentYears, isHydrated, userEmail, isDemoMode]);
 
   useEffect(() => {
     try {
@@ -836,7 +844,7 @@ export default function Home() {
 
       // Save to database only if logged in and data loaded
       if (userEmail) {
-        if (!hasLoadedServerDataRef.current) {
+        if (!hasLoadedServerDataRef.current || isDemoMode) {
           return;
         }
         saveFocusAreas(focusAreas);
@@ -844,7 +852,7 @@ export default function Home() {
     } catch (error) {
       console.error("Failed to save focus areas", error);
     }
-  }, [focusAreas, isHydrated, userEmail]);
+  }, [focusAreas, isHydrated, userEmail, isDemoMode]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -864,7 +872,7 @@ export default function Home() {
       return;
     }
 
-    if (!hasLoadedServerDataRef.current) {
+    if (!hasLoadedServerDataRef.current || isDemoMode) {
       return;
     }
 
@@ -885,7 +893,7 @@ export default function Home() {
         monthEntriesSaveTimeoutRef.current = null;
       }
     };
-  }, [monthEntries, isHydrated, userEmail, triggerMonthEntriesSave]);
+  }, [monthEntries, isHydrated, userEmail, isDemoMode, triggerMonthEntriesSave]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -905,7 +913,7 @@ export default function Home() {
       return;
     }
 
-    if (!hasLoadedServerDataRef.current) {
+    if (!hasLoadedServerDataRef.current || isDemoMode) {
       return;
     }
 
@@ -926,7 +934,7 @@ export default function Home() {
         productivitySaveTimeoutRef.current = null;
       }
     };
-  }, [productivityRatings, isHydrated, userEmail, triggerProductivitySave]);
+  }, [productivityRatings, isHydrated, userEmail, isDemoMode, triggerProductivitySave]);
 
   useEffect(() => {
     try {
@@ -967,7 +975,7 @@ export default function Home() {
         console.warn("Could not save schedule entries to localStorage due to quota limits");
       }
 
-      if (!userEmail) {
+      if (!userEmail || isDemoMode) {
         return;
       }
 
@@ -1014,7 +1022,7 @@ export default function Home() {
       return;
     }
 
-    if (!hasLoadedServerDataRef.current) {
+    if (!hasLoadedServerDataRef.current || isDemoMode) {
       return;
     }
 
@@ -1035,7 +1043,7 @@ export default function Home() {
         goalsSaveTimeoutRef.current = null;
       }
     };
-  }, [goals, isHydrated, userEmail, triggerGoalsSave]);
+  }, [goals, isHydrated, userEmail, isDemoMode, triggerGoalsSave]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -1070,7 +1078,7 @@ export default function Home() {
       return;
     }
 
-    if (!hasLoadedServerDataRef.current) {
+    if (!hasLoadedServerDataRef.current || isDemoMode) {
       return;
     }
 
@@ -1091,7 +1099,7 @@ export default function Home() {
         weeklyNotesSaveTimeoutRef.current = null;
       }
     };
-  }, [weeklyNotes, isHydrated, userEmail, triggerWeeklyNotesSave]);
+  }, [weeklyNotes, isHydrated, userEmail, isDemoMode, triggerWeeklyNotesSave]);
 
   // Set current week as selected by default when viewing productivity tracker
   useEffect(() => {
