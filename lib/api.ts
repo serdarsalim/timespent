@@ -1,14 +1,38 @@
 // API service layer for data operations
 
 // Transform flat array of schedule entries to grouped by dayKey
+// Only includes entries from the last 90 days to prevent memory issues
 function transformScheduleFromDB(entries: any[]): Record<string, any[]> {
   const grouped: Record<string, any[]> = {}
   if (!Array.isArray(entries)) {
     console.error('transformScheduleFromDB: entries is not an array', entries)
     return grouped
   }
+
+  // Calculate cutoff date (90 days ago)
+  const cutoffDate = new Date()
+  cutoffDate.setDate(cutoffDate.getDate() - 90)
+  cutoffDate.setHours(0, 0, 0, 0)
+
   for (const entry of entries) {
     const { dayKey, ...rest } = entry
+
+    // Parse dayKey format: "YYYY-M-D"
+    const match = dayKey.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
+    if (match) {
+      const [, year, month, day] = match
+      const entryDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day)
+      )
+
+      // Skip entries older than 90 days
+      if (entryDate < cutoffDate) {
+        continue
+      }
+    }
+
     if (!grouped[dayKey]) {
       grouped[dayKey] = []
     }
@@ -18,9 +42,32 @@ function transformScheduleFromDB(entries: any[]): Record<string, any[]> {
 }
 
 // Transform grouped schedule entries to flat array with dayKey field
+// Only saves entries from the last 90 days to prevent database bloat
 function transformScheduleToDB(grouped: Record<string, any[]>): any[] {
   const flat: any[] = []
+
+  // Calculate cutoff date (90 days ago)
+  const cutoffDate = new Date()
+  cutoffDate.setDate(cutoffDate.getDate() - 90)
+  cutoffDate.setHours(0, 0, 0, 0)
+
   for (const [dayKey, entries] of Object.entries(grouped)) {
+    // Parse dayKey format: "YYYY-M-D"
+    const match = dayKey.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
+    if (match) {
+      const [, year, month, day] = match
+      const entryDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day)
+      )
+
+      // Skip entries older than 90 days
+      if (entryDate < cutoffDate) {
+        continue
+      }
+    }
+
     for (const entry of entries) {
       flat.push({
         dayKey,
@@ -147,6 +194,12 @@ export async function saveGoals(goals: any[]) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ goals })
     })
+
+    // Guest users will get 401, which is expected
+    if (response.status === 401) {
+      return null
+    }
+
     const data = await response.json()
     return data.goals
   } catch (error) {
@@ -163,6 +216,12 @@ export async function saveSchedule(scheduleEntries: Record<string, any[]>) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scheduleEntries: flat })
     })
+
+    // Guest users will get 401, which is expected
+    if (response.status === 401) {
+      return null
+    }
+
     const data = await response.json()
     return transformScheduleFromDB(data.scheduleEntries)
   } catch (error) {
@@ -179,6 +238,11 @@ export async function saveProductivity(productivityRatings: Record<string, numbe
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ productivityRatings: array })
     })
+
+    // Guest users will get 401, which is expected
+    if (response.status === 401) {
+      return null
+    }
 
     if (!response.ok) {
       console.error('Error response from API:', response.status, response.statusText)
@@ -207,6 +271,12 @@ export async function saveWeeklyNotes(weeklyNotes: Record<string, string>) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ weeklyNotes: array })
     })
+
+    // Guest users will get 401, which is expected
+    if (response.status === 401) {
+      return null
+    }
+
     const data = await response.json()
     return transformWeeklyNotesFromDB(data.weeklyNotes)
   } catch (error) {
@@ -222,6 +292,12 @@ export async function saveFocusAreas(focusAreas: any[]) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ focusAreas })
     })
+
+    // Guest users will get 401, which is expected
+    if (response.status === 401) {
+      return null
+    }
+
     const data = await response.json()
     return data.focusAreas
   } catch (error) {
@@ -238,6 +314,12 @@ export async function saveMonthEntries(monthEntries: Record<string, string>) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ monthEntries: array })
     })
+
+    // Guest users will get 401, which is expected
+    if (response.status === 401) {
+      return null
+    }
+
     const data = await response.json()
     return transformMonthEntriesFromDB(data.monthEntries)
   } catch (error) {
@@ -253,6 +335,12 @@ export async function saveProfile(profile: any) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ profile })
     })
+
+    // Guest users will get 401, which is expected
+    if (response.status === 401) {
+      return null
+    }
+
     const data = await response.json()
     return data.profile
   } catch (error) {

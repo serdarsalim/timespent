@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { UserInfo } from "./components/UserInfo";
 import { migrateFromLocalStorage } from "@/lib/migrate";
@@ -14,6 +15,22 @@ import {
   saveMonthEntries,
   saveProfile
 } from "@/lib/api";
+import { APP_NAME, legacyStorageKey, storageKey } from "@/lib/branding";
+import {
+  filterRecentScheduleEntries,
+  safeLocalStorageSetItem,
+  cleanupOldScheduleEntries,
+  emergencyCleanup,
+} from "@/lib/localStorage-utils";
+import {
+  demoScheduleEntries,
+  demoProductivityRatings,
+  demoGoals,
+  demoFocusAreas,
+  demoWeeklyNotes,
+  demoMonthEntries,
+  demoProfile,
+} from "@/lib/demo-data";
 
 type Theme = "light" | "dark";
 
@@ -248,8 +265,18 @@ export default function Home() {
   const [focusAreas, setFocusAreas] = useState<FocusArea[]>(defaultFocusAreas);
   const [isEditingFocus, setIsEditingFocus] = useState(false);
   const [recentYears, setRecentYears] = useState<string>("10");
-  const [view, setView] = useState<ViewMode>("life");
+  const [view, setView] = useState<ViewMode>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem("timespent-active-view");
+      if (stored === "life" || stored === "productivity" || stored === "goals") {
+        return stored;
+      }
+    }
+    return "life";
+  });
   const [isHydrated, setIsHydrated] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [monthEntries, setMonthEntries] = useState<Record<string, string>>({});
   const [selectedMonth, setSelectedMonth] = useState<{
     year: number;
@@ -303,15 +330,18 @@ export default function Home() {
     async function loadData() {
       let shouldOpenProfileModal: boolean | null = null;
       try {
-        // First check if user is logged in by trying to fetch session
+        // Check session first
         const sessionRes = await fetch("/api/auth/session");
         const session = await sessionRes.json();
 
-        if (session?.user) {
-          // User is logged in - try to migrate from localStorage if needed
-          await migrateFromLocalStorage();
+        const isLoggedIn = !!session?.user?.email;
+        setUserEmail(session?.user?.email || null);
 
-          // Load data from database
+        if (isLoggedIn) {
+          // Logged in - load from database
+          await migrateFromLocalStorage();
+          cleanupOldScheduleEntries();
+
           const data = await loadAllData();
 
           if (data) {
@@ -334,6 +364,18 @@ export default function Home() {
               shouldOpenProfileModal = !complete;
             }
           }
+        } else {
+          // Guest - load demo data
+          setGoals(demoGoals);
+          setScheduleEntries(demoScheduleEntries);
+          setProductivityRatings(demoProductivityRatings);
+          setWeeklyNotes(demoWeeklyNotes);
+          setFocusAreas(demoFocusAreas);
+          setMonthEntries(demoMonthEntries);
+          setPersonName(demoProfile.personName);
+          setDateOfBirth(demoProfile.dateOfBirth);
+          setWeekStartDay(demoProfile.weekStartDay as WeekdayIndex);
+          setRecentYears(demoProfile.recentYears);
         }
 
         // Also load UI preferences from localStorage (these are not in DB)
@@ -397,17 +439,19 @@ export default function Home() {
         })
       );
 
-      // Save to database
-      saveProfile({
-        personName: personName || null,
-        dateOfBirth: dateOfBirth || null,
-        weekStartDay,
-        recentYears
-      });
+      // Save to database only if logged in
+      if (userEmail) {
+        saveProfile({
+          personName: personName || null,
+          dateOfBirth: dateOfBirth || null,
+          weekStartDay,
+          recentYears
+        });
+      }
     } catch (error) {
       console.error("Failed to save profile", error);
     }
-  }, [personName, dateOfBirth, email, weekStartDay, recentYears, isHydrated]);
+  }, [personName, dateOfBirth, email, weekStartDay, recentYears, isHydrated, userEmail]);
 
   useEffect(() => {
     try {
@@ -427,12 +471,14 @@ export default function Home() {
         JSON.stringify(focusAreas)
       );
 
-      // Save to database
-      saveFocusAreas(focusAreas);
+      // Save to database only if logged in
+      if (userEmail) {
+        saveFocusAreas(focusAreas);
+      }
     } catch (error) {
       console.error("Failed to save focus areas", error);
     }
-  }, [focusAreas, isHydrated]);
+  }, [focusAreas, isHydrated, userEmail]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -444,12 +490,14 @@ export default function Home() {
         JSON.stringify(monthEntries)
       );
 
-      // Save to database
-      saveMonthEntries(monthEntries);
+      // Save to database only if logged in
+      if (userEmail) {
+        saveMonthEntries(monthEntries);
+      }
     } catch (error) {
       console.error("Failed to save month entries", error);
     }
-  }, [monthEntries, isHydrated]);
+  }, [monthEntries, isHydrated, userEmail]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -461,12 +509,14 @@ export default function Home() {
         JSON.stringify(productivityRatings)
       );
 
-      // Save to database
-      saveProductivity(productivityRatings);
+      // Save to database only if logged in
+      if (userEmail) {
+        saveProductivity(productivityRatings);
+      }
     } catch (error) {
       console.error("Failed to save productivity ratings", error);
     }
-  }, [productivityRatings, isHydrated]);
+  }, [productivityRatings, isHydrated, userEmail]);
 
   useEffect(() => {
     try {
@@ -483,18 +533,32 @@ export default function Home() {
     if (!isHydrated) return;
 
     try {
-      // Save to localStorage as backup
-      window.localStorage.setItem(
+      // Filter to keep only recent entries (last 90 days) to prevent quota issues
+      const recentEntries = filterRecentScheduleEntries(scheduleEntries);
+
+      // Save to localStorage as backup with quota error handling
+      const saved = safeLocalStorageSetItem(
         "timespent-schedule-entries",
-        JSON.stringify(scheduleEntries)
+        JSON.stringify(recentEntries),
+        () => {
+          // If quota is still exceeded after filtering, try to clear and retry
+          console.warn("Attempting to clear old data and retry...");
+          cleanupOldScheduleEntries();
+        }
       );
 
-      // Save to database
-      saveSchedule(scheduleEntries);
+      if (!saved) {
+        console.warn("Could not save schedule entries to localStorage due to quota limits");
+      }
+
+      // Save to database only if logged in
+      if (userEmail) {
+        saveSchedule(scheduleEntries);
+      }
     } catch (error) {
       console.error("Failed to save schedule entries", error);
     }
-  }, [scheduleEntries, isHydrated]);
+  }, [scheduleEntries, isHydrated, userEmail]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -506,12 +570,14 @@ export default function Home() {
         JSON.stringify(goals)
       );
 
-      // Save to database
-      saveGoals(goals);
+      // Save to database only if logged in
+      if (userEmail) {
+        saveGoals(goals);
+      }
     } catch (error) {
       console.error("Failed to save goals", error);
     }
-  }, [goals, isHydrated]);
+  }, [goals, isHydrated, userEmail]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -538,12 +604,14 @@ export default function Home() {
         JSON.stringify(weeklyNotes)
       );
 
-      // Save to database
-      saveWeeklyNotes(weeklyNotes);
+      // Save to database only if logged in
+      if (userEmail) {
+        saveWeeklyNotes(weeklyNotes);
+      }
     } catch (error) {
       console.error("Failed to save weekly notes", error);
     }
-  }, [weeklyNotes, isHydrated]);
+  }, [weeklyNotes, isHydrated, userEmail]);
 
   // Set current week as selected by default when viewing productivity tracker
   useEffect(() => {
@@ -1146,47 +1214,65 @@ const goalStatusBadge = (status: KeyResultStatus) => {
   };
 
   if (!isHydrated) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-foreground border-r-transparent"></div>
+          <p className="text-sm text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+            Loading...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground transition-colors">
-      <header className="flex items-center justify-between border-b border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] px-4 py-2 text-sm">
-        <nav className="flex gap-2 text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-          <button
-            type="button"
-            onClick={() => setView("life")}
-            className={`rounded-full px-4 py-1 transition ${
-              view === "life"
-                ? "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-foreground"
-                : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
-            }`}
-          >
-            Schedule
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("productivity")}
-            className={`rounded-full px-4 py-1 transition ${
-              view === "productivity"
-                ? "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-foreground"
-                : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
-            }`}
-          >
-            Tracker
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("goals")}
-            className={`rounded-full px-4 py-1 transition ${
-              view === "goals"
-                ? "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-foreground"
-                : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
-            }`}
-          >
-            Goals
-          </button>
-        </nav>
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] px-4 py-3 text-sm">
+        <div className="flex flex-wrap items-center gap-4">
+          <Link href="/" className="block">
+            <img
+              src="/app-logo.png"
+              alt={`${APP_NAME} logo`}
+              className="h-10 w-auto"
+            />
+          </Link>
+          <nav className="flex gap-2 text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+            <button
+              type="button"
+              onClick={() => setView("life")}
+              className={`rounded-full px-4 py-1 transition ${
+                view === "life"
+                  ? "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-foreground"
+                  : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
+              }`}
+            >
+              Schedule
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("productivity")}
+              className={`rounded-full px-4 py-1 transition ${
+                view === "productivity"
+                  ? "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-foreground"
+                  : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
+              }`}
+            >
+              Tracker
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("goals")}
+              className={`rounded-full px-4 py-1 transition ${
+                view === "goals"
+                  ? "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-foreground"
+                  : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
+              }`}
+            >
+              Goals
+            </button>
+          </nav>
+        </div>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -1413,7 +1499,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                             </div>
                           );
                         })}
-                        {activeKrDraftGoalId === goal.id && goal.keyResults.length > 0 && (
+                        {activeKrDraftGoalId === goal.id && (
                           <div className="mt-3 flex flex-wrap items-center gap-3">
                             <div className="flex-1 rounded-2xl border border-dashed border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] p-4">
                               <input
@@ -1704,9 +1790,25 @@ const goalStatusBadge = (status: KeyResultStatus) => {
       )}
 
       <footer className="mt-24 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] px-6 py-4 text-sm">
-        <div className="flex items-center justify-between">
-          <p>TimeSpent</p>
-          <UserInfo />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+            {APP_NAME} · Minimal goal, productivity, and schedule tracker
+          </p>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/about"
+              className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] transition hover:text-foreground"
+            >
+              About
+            </Link>
+            <Link
+              href="/terms"
+              className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] transition hover:text-foreground"
+            >
+              Terms
+            </Link>
+            <UserInfo />
+          </div>
         </div>
       </footer>
     </div>

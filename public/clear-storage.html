@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clear Storage - SLMTRACK</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-top: 0;
+    }
+    p {
+      color: #666;
+      line-height: 1.6;
+    }
+    button {
+      background: #e53e3e;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #c53030;
+    }
+    .success {
+      background: #48bb78;
+      color: white;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+    .info {
+      background: #edf2f7;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    code {
+      background: #2d3748;
+      color: #48bb78;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧹 Clear Storage</h1>
+    <p>This page will help you clear corrupted localStorage data from your browser.</p>
+
+    <div class="info">
+      <strong>Current storage status:</strong>
+      <div id="storage-info" style="margin-top: 10px;">
+        <p>Checking...</p>
+      </div>
+    </div>
+
+    <p><strong>What will be cleared:</strong></p>
+    <ul>
+      <li>All <code>timespent-*</code> localStorage keys</li>
+      <li>All <code>slmtrack-*</code> localStorage keys</li>
+    </ul>
+
+    <p><strong>What will NOT be affected:</strong></p>
+    <ul>
+      <li>Your database data (safe in cloud)</li>
+      <li>Your authenticated session</li>
+    </ul>
+
+    <button onclick="clearStorage()">Clear All App Storage</button>
+    <div class="success" id="success-message">
+      ✓ Storage cleared successfully! You can close this page and refresh the app.
+    </div>
+  </div>
+
+  <script>
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    function checkStorage() {
+      const keys = Object.keys(localStorage);
+      const appKeys = keys.filter(key =>
+        key.startsWith('timespent-') || key.startsWith('slmtrack-')
+      );
+
+      let totalBytes = 0;
+      const details = appKeys.map(key => {
+        const value = localStorage.getItem(key) || '';
+        const bytes = new Blob([value]).size;
+        totalBytes += bytes;
+        return `<div style="margin: 5px 0;">
+          <code>${key}</code>: ${formatBytes(bytes)}
+        </div>`;
+      });
+
+      document.getElementById('storage-info').innerHTML = `
+        <p><strong>Found ${appKeys.length} app keys</strong></p>
+        <p><strong>Total size: ${formatBytes(totalBytes)}</strong></p>
+        ${details.join('')}
+      `;
+    }
+
+    function clearStorage() {
+      const keys = Object.keys(localStorage);
+      const appKeys = keys.filter(key =>
+        key.startsWith('timespent-') || key.startsWith('slmtrack-')
+      );
+
+      appKeys.forEach(key => {
+        localStorage.removeItem(key);
+        console.log('Removed:', key);
+      });
+
+      document.getElementById('success-message').style.display = 'block';
+      checkStorage();
+    }
+
+    // Check storage on page load
+    checkStorage();
+  </script>
+</body>
+</html>

@@ -31,13 +31,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
-      const isOnDashboard = nextUrl.pathname.startsWith('/')
+      const pathname = nextUrl.pathname
 
-      if (isOnDashboard) {
-        if (isLoggedIn) return true
-        return false // Redirect unauthenticated users to login page
+      // Protected admin routes
+      const protectedRoutes = ['/cleanup', '/nuke']
+      const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+
+      if (isProtectedRoute && !isLoggedIn) {
+        return false // Redirect to login
       }
 
+      // Allow all other routes for guests
       return true
     },
   },
