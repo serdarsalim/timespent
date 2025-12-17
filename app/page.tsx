@@ -3,6 +3,17 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { UserInfo } from "./components/UserInfo";
+import { migrateFromLocalStorage } from "@/lib/migrate";
+import {
+  loadAllData,
+  saveGoals,
+  saveSchedule,
+  saveProductivity,
+  saveWeeklyNotes,
+  saveFocusAreas,
+  saveMonthEntries,
+  saveProfile
+} from "@/lib/api";
 
 type Theme = "light" | "dark";
 
@@ -289,134 +300,72 @@ export default function Home() {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    let shouldOpenProfileModal: boolean | null = null;
-    try {
-      const storedProfile = window.localStorage.getItem("timespent-profile");
-      if (storedProfile) {
-        const parsed = JSON.parse(storedProfile) as {
-          name?: string;
-          dateOfBirth?: string;
-          email?: string;
-        };
-        if (parsed.name) {
-          setPersonName(parsed.name);
-        }
-        if (parsed.dateOfBirth) {
-          setDateOfBirth(parsed.dateOfBirth);
-        }
-        if (parsed.email) {
-          setEmail(parsed.email);
-        }
-        const complete =
-          Boolean(parsed.name) && Boolean(parsed.dateOfBirth) && Boolean(parsed.email);
-        shouldOpenProfileModal = !complete;
-      }
+    async function loadData() {
+      let shouldOpenProfileModal: boolean | null = null;
+      try {
+        // First check if user is logged in by trying to fetch session
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
 
-      const storedFocus = window.localStorage.getItem("timespent-focus-areas");
-      if (storedFocus) {
-        const parsedFocus = JSON.parse(storedFocus) as FocusArea[];
-        if (Array.isArray(parsedFocus) && parsedFocus.length > 0) {
-          setFocusAreas(parsedFocus);
-        }
-      }
+        if (session?.user) {
+          // User is logged in - try to migrate from localStorage if needed
+          await migrateFromLocalStorage();
 
-      const storedEntries = window.localStorage.getItem(
-        "timespent-life-entries"
-      );
-      if (storedEntries) {
-        const parsedEntries = JSON.parse(storedEntries) as Record<
-          string,
-          string
-        >;
-        if (parsedEntries && typeof parsedEntries === "object") {
-          setMonthEntries(parsedEntries);
-        }
-      }
+          // Load data from database
+          const data = await loadAllData();
 
-      const storedProductivityRatings = window.localStorage.getItem(
-        "timespent-productivity-ratings"
-      );
-      if (storedProductivityRatings) {
-        const parsedRatings = JSON.parse(
-          storedProductivityRatings
-        ) as Record<string, number | null>;
-        if (parsedRatings && typeof parsedRatings === "object") {
-          setProductivityRatings(parsedRatings);
-        }
-      }
+          if (data) {
+            // Set state from database
+            if (data.goals.length > 0) setGoals(data.goals);
+            if (Object.keys(data.scheduleEntries).length > 0) setScheduleEntries(data.scheduleEntries);
+            if (Object.keys(data.productivityRatings).length > 0) setProductivityRatings(data.productivityRatings);
+            if (Object.keys(data.weeklyNotes).length > 0) setWeeklyNotes(data.weeklyNotes);
+            if (data.focusAreas.length > 0) setFocusAreas(data.focusAreas);
+            if (Object.keys(data.monthEntries).length > 0) setMonthEntries(data.monthEntries);
 
-      const storedProductivityGoal = window.localStorage.getItem(
-        "timespent-productivity-goals"
-      );
-      if (storedProductivityGoal) {
-        const parsedGoals = JSON.parse(storedProductivityGoal) as Record<
-          number,
-          string
-        >;
-        if (parsedGoals && typeof parsedGoals === "object") {
-          setProductivityGoals(parsedGoals);
-        }
-      }
+            // Set profile data
+            if (data.profile) {
+              if (data.profile.personName) setPersonName(data.profile.personName);
+              if (data.profile.dateOfBirth) setDateOfBirth(data.profile.dateOfBirth);
+              if (data.profile.weekStartDay !== undefined) setWeekStartDay(data.profile.weekStartDay as WeekdayIndex);
+              if (data.profile.recentYears) setRecentYears(data.profile.recentYears);
 
-      const storedSchedule = window.localStorage.getItem(
-        "timespent-schedule-entries"
-      );
-      if (storedSchedule) {
-        const parsedSchedule = JSON.parse(storedSchedule) as Record<
-          string,
-          ScheduleEntry[]
-        >;
-        if (parsedSchedule && typeof parsedSchedule === "object") {
-          setScheduleEntries(parsedSchedule);
+              const complete = Boolean(data.profile.personName);
+              shouldOpenProfileModal = !complete;
+            }
+          }
         }
-      }
 
-      const storedGoals = window.localStorage.getItem("timespent-goals");
-      if (storedGoals) {
-        const parsedGoals = JSON.parse(storedGoals) as Goal[];
-        if (Array.isArray(parsedGoals)) {
-          setGoals(parsedGoals);
+        // Also load UI preferences from localStorage (these are not in DB)
+        const storedProductivityGoal = window.localStorage.getItem("timespent-productivity-goals");
+        if (storedProductivityGoal) {
+          const parsedGoals = JSON.parse(storedProductivityGoal) as Record<number, string>;
+          if (parsedGoals && typeof parsedGoals === "object") {
+            setProductivityGoals(parsedGoals);
+          }
         }
-      }
 
-      const storedWeeklyNotes = window.localStorage.getItem("timespent-weekly-notes");
-      if (storedWeeklyNotes) {
-        const parsedNotes = JSON.parse(storedWeeklyNotes) as Record<string, string>;
-        if (parsedNotes && typeof parsedNotes === "object") {
-          setWeeklyNotes(parsedNotes);
+        const storedView = window.localStorage.getItem("timespent-active-view");
+        if (storedView === "life" || storedView === "productivity" || storedView === "goals") {
+          setView(storedView);
         }
-      }
 
-      const storedView = window.localStorage.getItem("timespent-active-view");
-      if (storedView === "life" || storedView === "productivity" || storedView === "goals") {
-        setView(storedView);
-      }
-
-      const storedWeekStart = window.localStorage.getItem("timespent-week-start");
-      if (storedWeekStart) {
-        const parsedWeekStart = Number.parseInt(storedWeekStart, 10);
-        if (
-          Number.isFinite(parsedWeekStart) &&
-          parsedWeekStart >= 0 &&
-          parsedWeekStart <= 6
-        ) {
-          setWeekStartDay(parsedWeekStart as WeekdayIndex);
+        const storedProfileModalPreference = window.localStorage.getItem("timespent-profile-modal-open");
+        if (storedProfileModalPreference === "true") {
+          shouldOpenProfileModal = true;
+        } else if (storedProfileModalPreference === "false") {
+          shouldOpenProfileModal = false;
         }
+
+        setIsEditingProfile(shouldOpenProfileModal ?? false);
+        setIsHydrated(true);
+      } catch (error) {
+        console.error("Failed to load data", error);
+        setIsHydrated(true);
       }
-      const storedProfileModalPreference = window.localStorage.getItem(
-        "timespent-profile-modal-open"
-      );
-      if (storedProfileModalPreference === "true") {
-        shouldOpenProfileModal = true;
-      } else if (storedProfileModalPreference === "false") {
-        shouldOpenProfileModal = false;
-      }
-      setIsEditingProfile(shouldOpenProfileModal ?? false);
-      setIsHydrated(true);
-    } catch (error) {
-      console.error("Failed to load settings from cache", error);
-      setIsHydrated(true);
     }
+
+    loadData();
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -435,7 +384,10 @@ export default function Home() {
   }, [isEditingProfile, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     try {
+      // Save to localStorage as backup
       window.localStorage.setItem(
         "timespent-profile",
         JSON.stringify({
@@ -444,10 +396,18 @@ export default function Home() {
           email,
         })
       );
+
+      // Save to database
+      saveProfile({
+        personName: personName || null,
+        dateOfBirth: dateOfBirth || null,
+        weekStartDay,
+        recentYears
+      });
     } catch (error) {
-      console.error("Failed to cache profile", error);
+      console.error("Failed to save profile", error);
     }
-  }, [personName, dateOfBirth, email]);
+  }, [personName, dateOfBirth, email, weekStartDay, recentYears, isHydrated]);
 
   useEffect(() => {
     try {
@@ -458,37 +418,55 @@ export default function Home() {
   }, [view]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     try {
+      // Save to localStorage as backup
       window.localStorage.setItem(
         "timespent-focus-areas",
         JSON.stringify(focusAreas)
       );
+
+      // Save to database
+      saveFocusAreas(focusAreas);
     } catch (error) {
-      console.error("Failed to cache focus areas", error);
+      console.error("Failed to save focus areas", error);
     }
-  }, [focusAreas]);
+  }, [focusAreas, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     try {
+      // Save to localStorage as backup
       window.localStorage.setItem(
         "timespent-life-entries",
         JSON.stringify(monthEntries)
       );
+
+      // Save to database
+      saveMonthEntries(monthEntries);
     } catch (error) {
-      console.error("Failed to cache month entries", error);
+      console.error("Failed to save month entries", error);
     }
-  }, [monthEntries]);
+  }, [monthEntries, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     try {
+      // Save to localStorage as backup
       window.localStorage.setItem(
         "timespent-productivity-ratings",
         JSON.stringify(productivityRatings)
       );
+
+      // Save to database
+      saveProductivity(productivityRatings);
     } catch (error) {
-      console.error("Failed to cache productivity ratings", error);
+      console.error("Failed to save productivity ratings", error);
     }
-  }, [productivityRatings]);
+  }, [productivityRatings, isHydrated]);
 
   useEffect(() => {
     try {
@@ -502,48 +480,70 @@ export default function Home() {
   }, [productivityGoals]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     try {
+      // Save to localStorage as backup
       window.localStorage.setItem(
         "timespent-schedule-entries",
         JSON.stringify(scheduleEntries)
       );
+
+      // Save to database
+      saveSchedule(scheduleEntries);
     } catch (error) {
-      console.error("Failed to cache schedule entries", error);
+      console.error("Failed to save schedule entries", error);
     }
-  }, [scheduleEntries]);
+  }, [scheduleEntries, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     try {
+      // Save to localStorage as backup
       window.localStorage.setItem(
         "timespent-goals",
         JSON.stringify(goals)
       );
+
+      // Save to database
+      saveGoals(goals);
     } catch (error) {
-      console.error("Failed to cache goals", error);
+      console.error("Failed to save goals", error);
     }
-  }, [goals]);
+  }, [goals, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     try {
+      // Save to localStorage as backup
       window.localStorage.setItem(
         "timespent-week-start",
         String(weekStartDay)
       );
+      // weekStartDay is saved as part of profile in the database
     } catch (error) {
-      console.error("Failed to cache week start preference", error);
+      console.error("Failed to save week start preference", error);
     }
-  }, [weekStartDay]);
+  }, [weekStartDay, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     try {
+      // Save to localStorage as backup
       window.localStorage.setItem(
         "timespent-weekly-notes",
         JSON.stringify(weeklyNotes)
       );
+
+      // Save to database
+      saveWeeklyNotes(weeklyNotes);
     } catch (error) {
-      console.error("Failed to cache weekly notes", error);
+      console.error("Failed to save weekly notes", error);
     }
-  }, [weeklyNotes]);
+  }, [weeklyNotes, isHydrated]);
 
   // Set current week as selected by default when viewing productivity tracker
   useEffect(() => {
