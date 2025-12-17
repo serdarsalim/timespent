@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { UserInfo } from "./components/UserInfo";
 import { migrateFromLocalStorage } from "@/lib/migrate";
 import {
@@ -78,6 +78,41 @@ const TIME_OPTIONS: string[] = Array.from({ length: 24 * 2 }, (_, index) => {
   const minutes = (index % 2) * 30;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 });
+
+const DEFAULT_ENTRY_START = "09:00";
+const DEFAULT_ENTRY_DURATION_MINUTES = 60;
+
+const timeStringToMinutes = (time: string | undefined | null): number | null => {
+  if (!time) return null;
+  const [hoursStr, minutesStr] = time.split(":");
+  const hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+  return hours * 60 + minutes;
+};
+
+const minutesToTimeString = (minutes: number): string => {
+  const clamped = Math.max(0, Math.min(minutes, 23 * 60 + 30));
+  const hours = Math.floor(clamped / 60);
+  const mins = clamped % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+};
+
+const nextEntryTimes = (entries: ScheduleEntry[]): { start: string; end: string } => {
+  const lastEntry = entries[entries.length - 1];
+  const defaultStartMinutes =
+    timeStringToMinutes(lastEntry?.endTime ?? lastEntry?.time ?? DEFAULT_ENTRY_START) ??
+    timeStringToMinutes(DEFAULT_ENTRY_START)!;
+  const startMinutes = Math.min(defaultStartMinutes, 23 * 60 + 30);
+  const proposedEnd = startMinutes + DEFAULT_ENTRY_DURATION_MINUTES;
+  const endMinutes = Math.max(startMinutes + 30, Math.min(proposedEnd, 24 * 60));
+  return {
+    start: minutesToTimeString(startMinutes),
+    end: minutesToTimeString(endMinutes),
+  };
+};
 
 type EntryMeta = {
   originalDayKey?: string;
@@ -320,10 +355,61 @@ export default function Home() {
   } | null>(null);
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, string>>({});
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const lastProcessedScheduleRef = useRef<string | null>(null);
+  const pendingScheduleRef = useRef<Record<string, ScheduleEntry[]>>({});
+  const scheduleSaveTimeoutRef = useRef<number | null>(null);
+  const isSavingScheduleRef = useRef(false);
+  const lastServerSavedScheduleRef = useRef<string | null>(null);
+
+  const triggerScheduleSave = useCallback(() => {
+    if (!userEmail) {
+      return;
+    }
+
+    const pendingSerialized = JSON.stringify(pendingScheduleRef.current ?? {});
+    if (lastServerSavedScheduleRef.current === pendingSerialized) {
+      return;
+    }
+
+    if (isSavingScheduleRef.current) {
+      return;
+    }
+
+    const dataToSave = pendingScheduleRef.current;
+    const serializedToSave = pendingSerialized;
+
+    isSavingScheduleRef.current = true;
+    void (async () => {
+      try {
+        await saveSchedule(dataToSave);
+        lastServerSavedScheduleRef.current = serializedToSave;
+      } catch (error) {
+        console.error("Failed to persist schedule", error);
+      } finally {
+        isSavingScheduleRef.current = false;
+        const latestSerialized = JSON.stringify(pendingScheduleRef.current ?? {});
+        if (
+          userEmail &&
+          latestSerialized !== serializedToSave &&
+          !scheduleSaveTimeoutRef.current
+        ) {
+          scheduleSaveTimeoutRef.current = window.setTimeout(() => {
+            scheduleSaveTimeoutRef.current = null;
+            triggerScheduleSave();
+          }, 200);
+        }
+      }
+    })();
+  }, [userEmail]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    lastServerSavedScheduleRef.current = null;
+    pendingScheduleRef.current = {};
+  }, [userEmail]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -532,6 +618,12 @@ export default function Home() {
   useEffect(() => {
     if (!isHydrated) return;
 
+    const serializedSchedule = JSON.stringify(scheduleEntries);
+    if (lastProcessedScheduleRef.current === serializedSchedule) {
+      return;
+    }
+    lastProcessedScheduleRef.current = serializedSchedule;
+
     try {
       // Filter to keep only recent entries (last 90 days) to prevent quota issues
       const recentEntries = filterRecentScheduleEntries(scheduleEntries);
@@ -551,14 +643,30 @@ export default function Home() {
         console.warn("Could not save schedule entries to localStorage due to quota limits");
       }
 
-      // Save to database only if logged in
-      if (userEmail) {
-        saveSchedule(scheduleEntries);
+      pendingScheduleRef.current = scheduleEntries;
+
+      if (!userEmail) {
+        return;
       }
+
+      if (scheduleSaveTimeoutRef.current) {
+        window.clearTimeout(scheduleSaveTimeoutRef.current);
+      }
+      scheduleSaveTimeoutRef.current = window.setTimeout(() => {
+        scheduleSaveTimeoutRef.current = null;
+        triggerScheduleSave();
+      }, 600);
     } catch (error) {
       console.error("Failed to save schedule entries", error);
     }
-  }, [scheduleEntries, isHydrated, userEmail]);
+
+    return () => {
+      if (scheduleSaveTimeoutRef.current) {
+        window.clearTimeout(scheduleSaveTimeoutRef.current);
+        scheduleSaveTimeoutRef.current = null;
+      }
+    };
+  }, [scheduleEntries, isHydrated, userEmail, triggerScheduleSave]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -2600,13 +2708,17 @@ const WeeklySchedule = ({
   };
 
   const addEntry = (dayKey: string) => {
-    setScheduleEntries((prev) => ({
-      ...prev,
-      [dayKey]: [
-        ...(prev[dayKey] || []),
-        { time: "09:00", endTime: "10:00", title: "New task" },
-      ],
-    }));
+    setScheduleEntries((prev) => {
+      const dayEntries = prev[dayKey] ?? [];
+      const { start, end } = nextEntryTimes(dayEntries);
+      return {
+        ...prev,
+        [dayKey]: [
+          ...dayEntries,
+          { time: start, endTime: end, title: "New task" },
+        ],
+      };
+    });
   };
 
   const removeEntry = (
@@ -3554,55 +3666,57 @@ const WeeklySchedule = ({
                   className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-4 py-1.5 text-sm text-foreground outline-none focus:border-foreground"
                 />
               </label>
-              <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-                Accent color
-                <input
-                  type="color"
-                  value={activeEntry.data.color ?? "#8E7DBE"}
-                  onChange={(event) =>
-                    handleActiveFieldChange("color", event.target.value)
-                  }
-                  className="mt-1 h-10 w-full cursor-pointer rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-3 py-1.5"
-                />
-              </label>
-              <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-                Repeat
-                <select
-                  value={activeEntryRepeatValue}
-                  onChange={(event) =>
-                    handleActiveFieldChange("repeat", event.target.value)
-                  }
-                  className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-4 py-1.5 text-sm text-foreground outline-none focus:border-foreground"
-                >
-                  <option value="none">Does not repeat</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="biweekly">Every 2 weeks</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-                {activeEntryRepeatValue === "daily" && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {WEEKDAY_SHORT_LABELS.map((label, dayIndex) => {
-                      const index = dayIndex as WeekdayIndex;
-                      const isActive = activeEntryRepeatDays.includes(index);
-                      return (
-                        <button
-                          key={`repeat-day-${label}`}
-                          type="button"
-                          onClick={() => handleActiveRepeatDaysToggle(index)}
-                          className={`rounded-full border px-3 py-1 text-xs transition ${
-                            isActive
-                              ? "border-foreground text-foreground"
-                              : "border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                  Accent color
+                  <input
+                    type="color"
+                    value={activeEntry.data.color ?? "#8E7DBE"}
+                    onChange={(event) =>
+                      handleActiveFieldChange("color", event.target.value)
+                    }
+                    className="mt-1 h-10 w-full cursor-pointer rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-3 py-1.5"
+                  />
+                </label>
+                <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                  Repeat
+                  <select
+                    value={activeEntryRepeatValue}
+                    onChange={(event) =>
+                      handleActiveFieldChange("repeat", event.target.value)
+                    }
+                    className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-4 py-1.5 text-sm text-foreground outline-none focus:border-foreground"
+                  >
+                    <option value="none">Does not repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Every 2 weeks</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                  {activeEntryRepeatValue === "daily" && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {WEEKDAY_SHORT_LABELS.map((label, dayIndex) => {
+                        const index = dayIndex as WeekdayIndex;
+                        const isActive = activeEntryRepeatDays.includes(index);
+                        return (
+                          <button
+                            key={`repeat-day-${label}`}
+                            type="button"
+                            onClick={() => handleActiveRepeatDaysToggle(index)}
+                            className={`rounded-full border px-3 py-1 text-xs transition ${
+                              isActive
+                                ? "border-foreground text-foreground"
+                                : "border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </label>
+              </div>
             </div>
 
             <div className="mt-6 flex items-center justify-between">

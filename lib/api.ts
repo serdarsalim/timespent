@@ -222,7 +222,17 @@ export async function saveSchedule(scheduleEntries: Record<string, any[]>) {
       return null
     }
 
-    const data = await response.json()
+    if (!response.ok) {
+      console.error('Error saving schedule entries:', response.status, response.statusText)
+      return null
+    }
+
+    const data = await response.json().catch(() => null)
+    if (!data || !Array.isArray(data.scheduleEntries)) {
+      console.error('Invalid schedule response payload', data)
+      return null
+    }
+
     return transformScheduleFromDB(data.scheduleEntries)
   } catch (error) {
     console.error('Error saving schedule:', error)
