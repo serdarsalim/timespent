@@ -153,7 +153,6 @@ export async function loadAllData() {
   try {
     const [
       goalsRes,
-      scheduleRes,
       productivityRes,
       weeklyNotesRes,
       focusAreasRes,
@@ -161,7 +160,6 @@ export async function loadAllData() {
       profileRes
     ] = await Promise.all([
       fetch('/api/goals'),
-      fetch('/api/schedule'),
       fetch('/api/productivity'),
       fetch('/api/weekly-notes'),
       fetch('/api/focus-areas'),
@@ -171,7 +169,6 @@ export async function loadAllData() {
 
     const [
       { goals },
-      { scheduleEntries },
       { productivityRatings },
       { weeklyNotes },
       { focusAreas },
@@ -179,7 +176,6 @@ export async function loadAllData() {
       { profile }
     ] = await Promise.all([
       goalsRes.json(),
-      scheduleRes.json(),
       productivityRes.json(),
       weeklyNotesRes.json(),
       focusAreasRes.json(),
@@ -189,7 +185,7 @@ export async function loadAllData() {
 
     return {
       goals: goals || [],
-      scheduleEntries: transformScheduleFromDB(scheduleEntries || []),
+      scheduleEntries: {},
       productivityRatings: transformProductivityFromDB(productivityRatings || []),
       weeklyNotes: transformWeeklyNotesFromDB(weeklyNotes || []),
       focusAreas: focusAreas || [],
@@ -234,35 +230,8 @@ export async function saveGoals(goals: any[]) {
 }
 
 export async function saveSchedule(scheduleEntries: Record<string, any[]>) {
-  try {
-    const flat = transformScheduleToDB(scheduleEntries)
-    const response = await fetch('/api/schedule', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scheduleEntries: flat })
-    })
-
-    // Guest users will get 401, which is expected
-    if (response.status === 401) {
-      return null
-    }
-
-    if (!response.ok) {
-      console.error('Error saving schedule entries:', response.status, response.statusText)
-      return null
-    }
-
-    const data = await response.json().catch(() => null)
-    if (!data || !Array.isArray(data.scheduleEntries)) {
-      console.error('Invalid schedule response payload', data)
-      return null
-    }
-
-    return transformScheduleFromDB(data.scheduleEntries)
-  } catch (error) {
-    console.error('Error saving schedule:', error)
-    return null
-  }
+  // Schedule API has been deprecated
+  return {}
 }
 
 export async function saveProductivity(productivityRatings: Record<string, number | null>) {

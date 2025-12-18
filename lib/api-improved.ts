@@ -108,10 +108,9 @@ function transformMonthEntriesToDB(obj: Record<string, string>): any[] {
 // API functions
 export async function loadAllData() {
   try {
-    const [goalsRes, scheduleRes, productivityRes, weeklyNotesRes, focusAreasRes, monthEntriesRes, profileRes] =
+    const [goalsRes, productivityRes, weeklyNotesRes, focusAreasRes, monthEntriesRes, profileRes] =
       await Promise.all([
         apiGet('/api/goals'),
-        apiGet('/api/schedule'),
         apiGet('/api/productivity'),
         apiGet('/api/weekly-notes'),
         apiGet('/api/focus-areas'),
@@ -121,7 +120,7 @@ export async function loadAllData() {
 
     return {
       goals: goalsRes.success && goalsRes.data ? (goalsRes.data as any).goals || [] : [],
-      scheduleEntries: scheduleRes.success && scheduleRes.data ? transformScheduleFromDB((scheduleRes.data as any).scheduleEntries || []) : {},
+      scheduleEntries: {},
       productivityRatings: productivityRes.success && productivityRes.data ? transformProductivityFromDB((productivityRes.data as any).productivityRatings || []) : {},
       weeklyNotes: weeklyNotesRes.success && weeklyNotesRes.data ? transformWeeklyNotesFromDB((weeklyNotesRes.data as any).weeklyNotes || []) : {},
       focusAreas: focusAreasRes.success && focusAreasRes.data ? (focusAreasRes.data as any).focusAreas || [] : [],
@@ -149,12 +148,8 @@ export async function saveGoals(goals: Goal[]) {
 }
 
 export async function saveSchedule(scheduleEntries: Record<string, ScheduleEntry[]>) {
-  const flat = transformScheduleToDB(scheduleEntries)
-  const response = await apiPost('/api/schedule', { scheduleEntries: flat })
-  if (!response.success) {
-    throw new Error(response.error || 'Failed to save schedule')
-  }
-  return transformScheduleFromDB((response.data as any)?.scheduleEntries || [])
+  // Schedule API has been deprecated
+  return {}
 }
 
 export async function saveProductivity(productivityRatings: Record<string, number | null>) {
