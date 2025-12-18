@@ -398,7 +398,6 @@ export default function Home() {
   const [weekStartDay, setWeekStartDay] = useState<WeekdayIndex>(1);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [newGoalTitle, setNewGoalTitle] = useState("");
-  const [newGoalTimeframe, setNewGoalTimeframe] = useState("");
   const [krDrafts, setKrDrafts] = useState<Record<string, { title: string }>>({});
   const [activeKrDraftGoalId, setActiveKrDraftGoalId] = useState<string | null>(null);
   const [isAddingGoal, setIsAddingGoal] = useState(false);
@@ -1287,16 +1286,14 @@ export default function Home() {
       return;
     }
 
-    const timeframe = newGoalTimeframe.trim() || "This quarter";
     const nextGoal: Goal = {
       id: generateId(),
       title,
-      timeframe,
+      timeframe: "",
       keyResults: [],
     };
     setGoals((prev) => [...prev, nextGoal]);
     setNewGoalTitle("");
-    setNewGoalTimeframe("");
     setIsAddingGoal(false);
   };
 
@@ -1982,36 +1979,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                       {goal.title}
                     </button>
                   )}
-                  {activeGoalFieldEdit?.goalId === goal.id &&
-                  activeGoalFieldEdit.field === "timeframe" ? (
-                    <input
-                      type="text"
-                      value={
-                        goalFieldDrafts[goal.id]?.timeframe ?? goal.timeframe
-                      }
-                      onChange={(event) =>
-                        handleGoalFieldDraftChange(
-                          goal.id,
-                          "timeframe",
-                          event.target.value
-                        )
-                      }
-                      onBlur={() => commitGoalFieldEdit(goal.id, "timeframe")}
-                      onKeyDown={(event) =>
-                        handleGoalFieldKeyDown(event, goal.id, "timeframe")
-                      }
-                      autoFocus
-                      className="mt-1 w-full border-b border-transparent bg-transparent text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] outline-none focus:border-foreground"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => beginGoalFieldEdit(goal, "timeframe")}
-                      className="mt-1 text-left text-sm text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] transition hover:text-foreground"
-                    >
-                      {goal.timeframe}
-                    </button>
-                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   {activeGoalCardId === goal.id && (
@@ -2027,7 +1994,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 </div>
               </div>
 
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 space-y-0">
                 {goal.keyResults.map((kr, krIndex) => {
                   const krKey = krFieldKey(goal.id, kr.id);
                   const isEditingKrTitle =
@@ -2035,7 +2002,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     activeKrFieldEdit.krId === kr.id &&
                     activeKrFieldEdit.field === "title";
                   return (
-                    <div key={kr.id} className="rounded-2xl px-4 pb-3 pt-4">
+                    <div key={kr.id} className="rounded-2xl px-3 py-2">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex-1 space-y-1">
                           {isEditingKrTitle ? (
@@ -2171,19 +2138,12 @@ const goalStatusBadge = (status: KeyResultStatus) => {
           </button>
         ) : (
           <div className="w-full max-w-3xl okr-card p-6">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               <input
                 type="text"
                 value={newGoalTitle}
                 onChange={(event) => setNewGoalTitle(event.target.value)}
                 placeholder="Objective title"
-                className="border-b border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] bg-transparent pb-1 text-sm text-foreground outline-none focus:border-foreground"
-              />
-              <input
-                type="text"
-                value={newGoalTimeframe}
-                onChange={(event) => setNewGoalTimeframe(event.target.value)}
-                placeholder="Timeframe (e.g., Q2 2025)"
                 className="border-b border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] bg-transparent pb-1 text-sm text-foreground outline-none focus:border-foreground"
               />
             </div>
@@ -2456,12 +2416,11 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 ✕
               </button>
             </div>
-            <div className="mb-4 rounded-2xl bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-                Logged in as
-              </p>
-              <UserInfo />
-            </div>
+            {userEmail && (
+              <div className="mb-4 rounded-2xl bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] p-4">
+                <UserInfo showLabel />
+              </div>
+            )}
             <div className="grid gap-4">
               <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
                 Full name

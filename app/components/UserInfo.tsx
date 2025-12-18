@@ -31,6 +31,9 @@ export function UserInfo({ showLabel = false }: UserInfoProps) {
   if (loading) return null;
 
   if (!session?.user) {
+    if (showLabel) {
+      return null;
+    }
     const openAuthPopup = (e: React.MouseEvent<HTMLAnchorElement>) => {
       e.preventDefault();
       const width = 500;
@@ -75,11 +78,11 @@ export function UserInfo({ showLabel = false }: UserInfoProps) {
 
   // Only show user info when showLabel is true (in settings/footer)
   return (
-    <div className="flex items-center gap-3 text-sm">
+    <div className="flex flex-wrap items-center gap-3 text-sm">
       <span className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-        Signed in as
+        Logged in as
       </span>
-      <span className="text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+      <span className="text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]">
         {session.user.email}
       </span>
       <a

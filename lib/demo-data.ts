@@ -47,23 +47,23 @@ export const demoProductivityRatings = {
 export const demoGoals = [
   {
     id: "1",
-    title: "Launch New Product",
+    title: "Launch New Product – Mar 2025",
     timeframe: "Q1 2025",
     description: "Ship beta version of our productivity app",
     keyResults: [
-      { id: "kr1", title: "Complete user research", status: "completed" as const },
-      { id: "kr2", title: "Build MVP", status: "started" as const },
-      { id: "kr3", title: "Get 100 beta users", status: "pending" as const },
+      { id: "kr1", title: "Complete user research (Jan 12)", status: "completed" as const },
+      { id: "kr2", title: "Build MVP ready for review (Feb 10)", status: "started" as const },
+      { id: "kr3", title: "Get 100 beta users before Mar 01", status: "pending" as const },
     ],
   },
   {
     id: "2",
-    title: "Health & Fitness",
+    title: "Health & Fitness – 2025 Plan",
     timeframe: "2025",
     description: "Improve overall health and wellbeing",
     keyResults: [
-      { id: "kr4", title: "Exercise 4x per week", status: "completed" as const },
-      { id: "kr5", title: "Sleep 8 hours daily", status: "started" as const },
+      { id: "kr4", title: "Exercise 4x per week (tracked Feb)", status: "completed" as const },
+      { id: "kr5", title: "Sleep 8 hours daily in March", status: "started" as const },
     ],
   },
 ];
