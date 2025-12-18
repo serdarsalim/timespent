@@ -1342,6 +1342,19 @@ export default function Home() {
   };
 
   const handleArchiveGoal = async (goalId: string) => {
+    const goalToArchive = goals.find((g) => g.id === goalId);
+    if (!goalToArchive) {
+      return;
+    }
+
+    const previousGoals = goals;
+    const previousArchivedGoals = archivedGoals;
+    const updatedGoal = { ...goalToArchive, archived: true };
+
+    // Optimistic update
+    setGoals((prev) => prev.filter((goal) => goal.id !== goalId));
+    setArchivedGoals((prev) => [...prev, updatedGoal]);
+
     try {
       const response = await fetch('/api/goals/archive', {
         method: 'PATCH',
@@ -1352,21 +1365,28 @@ export default function Home() {
       if (!response.ok) {
         throw new Error('Failed to archive goal');
       }
-
-      // Move goal from active to archived
-      const goalToArchive = goals.find(g => g.id === goalId);
-      if (goalToArchive) {
-        const updatedGoal = { ...goalToArchive, archived: true };
-        setGoals((prev) => prev.filter((goal) => goal.id !== goalId));
-        setArchivedGoals((prev) => [...prev, updatedGoal]);
-      }
     } catch (error) {
       console.error('Error archiving goal:', error);
+      setGoals(previousGoals);
+      setArchivedGoals(previousArchivedGoals);
       alert('Failed to archive goal. Please try again.');
     }
   };
 
   const handleUnarchiveGoal = async (goalId: string) => {
+    const goalToUnarchive = archivedGoals.find((g) => g.id === goalId);
+    if (!goalToUnarchive) {
+      return;
+    }
+
+    const previousGoals = goals;
+    const previousArchivedGoals = archivedGoals;
+    const updatedGoal = { ...goalToUnarchive, archived: false };
+
+    // Optimistic update
+    setArchivedGoals((prev) => prev.filter((goal) => goal.id !== goalId));
+    setGoals((prev) => [...prev, updatedGoal]);
+
     try {
       const response = await fetch('/api/goals/archive', {
         method: 'PATCH',
@@ -1377,16 +1397,10 @@ export default function Home() {
       if (!response.ok) {
         throw new Error('Failed to unarchive goal');
       }
-
-      // Move goal from archived to active
-      const goalToUnarchive = archivedGoals.find(g => g.id === goalId);
-      if (goalToUnarchive) {
-        const updatedGoal = { ...goalToUnarchive, archived: false };
-        setArchivedGoals((prev) => prev.filter((goal) => goal.id !== goalId));
-        setGoals((prev) => [...prev, updatedGoal]);
-      }
     } catch (error) {
       console.error('Error unarchiving goal:', error);
+      setGoals(previousGoals);
+      setArchivedGoals(previousArchivedGoals);
       alert('Failed to unarchive goal. Please try again.');
     }
   };
