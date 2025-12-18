@@ -2126,66 +2126,79 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             <>
               <section className="mt-8 grid gap-8 text-left lg:grid-cols-[1.2fr_1fr]">
                 <div className="flex flex-col rounded-3xl bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] p-4">
-                <div className="flex-1">
-                    <TinyEditor
-                      key={selectedWeek !== null ? `week-notes-${productivityYear}-${selectedWeek}` : `productivity-goal-${productivityYear}`}
-                      tinymceScriptSrc={TINYMCE_CDN}
-                      value={selectedWeek !== null ? selectedWeekEntry?.content ?? "" : currentProductivityGoal}
-                      init={
-                        {
-                          menubar: false,
-                          statusbar: false,
-                          height: 420,
-                          license_key: "gpl",
-                          plugins: "lists",
-                          skin: theme === "dark" ? "oxide-dark" : "oxide",
-                          content_css: theme === "dark" ? "dark" : "default",
-                          toolbar:
-                            "bold italic underline | bullist numlist | link removeformat",
-                          branding: false,
-                          placeholder: selectedWeek !== null ? "Add notes for this week..." : "",
-                        } as Record<string, unknown>
-                      }
-                      onEditorChange={(content) =>
-                        selectedWeekKey
-                          ? updateWeeklyNoteEntry(selectedWeekKey, { content })
-                          : setProductivityGoals((prev) => ({
-                              ...prev,
-                              [productivityYear]: content,
-                            }))
-                      }
-                    />
-                  </div>
-                  {selectedWeekKey && (
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <label className="flex flex-col gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_10%,transparent)] p-3">
-                        <span className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-                          Do&apos;s
-                        </span>
-                        <textarea
-                          value={selectedWeekEntry?.dos ?? ""}
-                          onChange={(event) =>
-                            updateWeeklyNoteEntry(selectedWeekKey, { dos: event.target.value })
-                          }
-                          placeholder="Behaviors to reinforce"
-                          className="min-h-[80px] resize-y rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-transparent p-2 text-sm text-foreground outline-none focus:border-foreground"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_10%,transparent)] p-3">
-                        <span className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-                          Don&apos;ts
+                {selectedWeekKey && (
+                  <div className="mb-4 grid gap-4 sm:grid-cols-2">
+                    <label
+                      className="flex flex-col gap-2 rounded-2xl p-3"
+                      style={{ backgroundColor: "var(--card-muted-bg)" }}
+                    >
+                      <span className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                        Do&apos;s
+                      </span>
+                      <textarea
+                        value={selectedWeekEntry?.dos ?? ""}
+                        onChange={(event) =>
+                          updateWeeklyNoteEntry(selectedWeekKey, { dos: event.target.value })
+                        }
+                        placeholder="Behaviors to reinforce"
+                        className="min-h-[88px] resize-y rounded-2xl border-none bg-transparent p-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)]"
+                      />
+                    </label>
+                    <label
+                      className="flex flex-col gap-2 rounded-2xl p-3"
+                      style={{ backgroundColor: "var(--card-muted-bg)" }}
+                    >
+                      <span className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                        Don&apos;ts
                         </span>
                         <textarea
                           value={selectedWeekEntry?.donts ?? ""}
-                          onChange={(event) =>
-                            updateWeeklyNoteEntry(selectedWeekKey, { donts: event.target.value })
-                          }
-                          placeholder="Behaviors to avoid"
-                          className="min-h-[80px] resize-y rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-transparent p-2 text-sm text-foreground outline-none focus:border-foreground"
-                        />
-                      </label>
-                    </div>
+                        onChange={(event) =>
+                          updateWeeklyNoteEntry(selectedWeekKey, { donts: event.target.value })
+                        }
+                        placeholder="Behaviors to avoid"
+                        className="min-h-[88px] resize-y rounded-2xl border-none bg-transparent p-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)]"
+                      />
+                    </label>
+                  </div>
                   )}
+                <div
+                  className="flex-1 rounded-2xl p-4"
+                  style={{ backgroundColor: "var(--card-muted-bg)" }}
+                >
+                  <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                    Weekly notes
+                  </span>
+                  <TinyEditor
+                    key={selectedWeek !== null ? `week-notes-${productivityYear}-${selectedWeek}` : `productivity-goal-${productivityYear}`}
+                    tinymceScriptSrc={TINYMCE_CDN}
+                    value={selectedWeek !== null ? selectedWeekEntry?.content ?? "" : currentProductivityGoal}
+                    init={
+                      {
+                        menubar: false,
+                        statusbar: false,
+                        height: 440,
+                        license_key: "gpl",
+                        plugins: "lists",
+                        skin: theme === "dark" ? "oxide-dark" : "oxide",
+                        content_css: theme === "dark" ? "dark" : "default",
+                        toolbar: false,
+                        content_style:
+                          "html,body { background-color: transparent; color: inherit; font-family: var(--font-sans, system-ui); }",
+                        branding: false,
+                        placeholder: selectedWeek !== null ? "Add notes for this week..." : "",
+                      } as Record<string, unknown>
+                    }
+                    onEditorChange={(content) =>
+                      selectedWeekKey
+                        ? updateWeeklyNoteEntry(selectedWeekKey, { content })
+                        : setProductivityGoals((prev) => ({
+                            ...prev,
+                            [productivityYear]: content,
+                          }))
+                    }
+                  />
+                </div>
                 </div>
 
                 <div className="space-y-4">

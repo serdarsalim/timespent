@@ -7,6 +7,7 @@
   --foreground-dark: #f8fafc;
   --background: var(--background-light);
   --foreground: var(--foreground-light);
+  --card-muted-bg: color-mix(in srgb, var(--foreground) 4%, transparent);
   color-scheme: light;
 }
 
@@ -35,4 +36,13 @@ body {
   font-family: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
   transition: background 0.3s ease, color 0.3s ease;
+}
+
+.tox .tox-edit-area {
+  background-color: transparent !important;
+  border-radius: 1rem !important;
+}
+
+.tox .tox-edit-area__iframe {
+  background-color: transparent !important;
 }
