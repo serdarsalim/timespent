@@ -2238,7 +2238,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
           {view === "productivity" && (
             <>
               <section className="mx-auto mt-8 grid max-w-[1920px] gap-8 text-left lg:grid-cols-[1fr_1.2fr]">
-                <div className="space-y-4">
+                <div className="space-y-4 order-2 lg:order-1">
                   <ProductivityGrid
                     year={productivityYear}
                     setYear={setProductivityYear}
@@ -2253,7 +2253,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   />
                 </div>
 
-                <div className="flex flex-col rounded-3xl bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] p-4">
+                <div className="flex flex-col rounded-3xl bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] p-4 order-1 lg:order-2">
                 <div className="mb-4 flex items-center justify-center gap-4 text-sm uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
                   <button
                     type="button"
