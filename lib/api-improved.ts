@@ -176,7 +176,7 @@ export async function saveProductivity(productivityRatings: Record<string, numbe
   return transformProductivityFromDB((response.data as any)?.productivityRatings || [])
 }
 
-export async function saveWeeklyNotes(weeklyNotes: Record<string, string>) {
+export async function saveWeeklyNotes(weeklyNotes: Record<string, WeeklyNotePayload>) {
   const array = transformWeeklyNotesToDB(weeklyNotes)
   const response = await apiPost('/api/weekly-notes', { weeklyNotes: array })
   if (!response.success) {
