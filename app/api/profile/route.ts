@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
           dateOfBirth: profile.dateOfBirth || null,
           weekStartDay: profile.weekStartDay ?? 0,
           recentYears: profile.recentYears || '10',
+          goalsSectionTitle: profile.goalsSectionTitle || '2026 GOALS',
         }
       })
     } else {
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
           dateOfBirth: profile.dateOfBirth || null,
           weekStartDay: profile.weekStartDay ?? 0,
           recentYears: profile.recentYears || '10',
+          goalsSectionTitle: profile.goalsSectionTitle || '2026 GOALS',
         }
       })
     }

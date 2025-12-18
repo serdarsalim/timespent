@@ -197,7 +197,7 @@ const defaultFocusAreas: FocusArea[] = [
 
 type ViewMode = "life" | "productivity";
 
-type KeyResultStatus = "started" | "pending" | "on-hold" | "completed";
+type KeyResultStatus = "on-hold" | "started" | "completed";
 
 type KeyResult = {
   id: string;
@@ -227,9 +227,9 @@ const TinyEditor = dynamic(
 const TINYMCE_CDN =
   "https://cdnjs.cloudflare.com/ajax/libs/tinymce/8.1.2/tinymce.min.js";
 const PRODUCTIVITY_SCALE = [
-  { value: 0, label: "Low", color: "productivity-low" },
-  { value: 1, label: "Medium", color: "productivity-medium" },
-  { value: 2, label: "High", color: "productivity-high" },
+  { value: 0, label: "Not achieved", color: "productivity-low" },
+  { value: 1, label: "Partly achieved", color: "productivity-medium" },
+  { value: 2, label: "Achieved", color: "productivity-high" },
   // { value: 3, label: ">75%", color: "bg-[#66bd63]" }, // Hidden for now
 ];
 
@@ -397,6 +397,8 @@ export default function Home() {
   >({});
   const [weekStartDay, setWeekStartDay] = useState<WeekdayIndex>(1);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [goalsSectionTitle, setGoalsSectionTitle] = useState("2026 GOALS");
+  const [isEditingGoalsSectionTitle, setIsEditingGoalsSectionTitle] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [krDrafts, setKrDrafts] = useState<Record<string, { title: string }>>({});
   const [activeKrDraftGoalId, setActiveKrDraftGoalId] = useState<string | null>(null);
@@ -758,6 +760,7 @@ export default function Home() {
                 setWeekStartDay(data.profile.weekStartDay as WeekdayIndex);
               }
               if (data.profile.recentYears) setRecentYears(data.profile.recentYears);
+              if (data.profile.goalsSectionTitle) setGoalsSectionTitle(data.profile.goalsSectionTitle);
 
               const complete = Boolean(data.profile.personName);
               shouldOpenProfileModal = !complete;
@@ -863,13 +866,14 @@ export default function Home() {
           personName: personName || null,
           dateOfBirth: dateOfBirth || null,
           weekStartDay,
-          recentYears
+          recentYears,
+          goalsSectionTitle
         });
       }
     } catch (error) {
       console.error("Failed to save profile", error);
     }
-  }, [personName, dateOfBirth, email, weekStartDay, recentYears, isHydrated, userEmail, isDemoMode]);
+  }, [personName, dateOfBirth, email, weekStartDay, recentYears, goalsSectionTitle, isHydrated, userEmail, isDemoMode]);
 
   useEffect(() => {
     try {
@@ -1620,7 +1624,7 @@ const beginKrFieldEdit = (
   };
 
   const cycleKeyResultStatus = (goalId: string, krId: string) => {
-    const order: KeyResultStatus[] = ["started", "pending", "on-hold", "completed"];
+    const order: KeyResultStatus[] = ["on-hold", "started", "completed"];
     setGoals((prev) =>
       prev.map((goal) =>
         goal.id === goalId
@@ -1644,8 +1648,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
   switch (status) {
     case "started":
       return "bg-[#dbeafe] text-[#1d4ed8]";
-    case "pending":
-      return "bg-[#fef3c7] text-[#b45309]";
     case "on-hold":
       return "bg-[#fef9c3] text-[#92400e]";
     case "completed":
@@ -1656,7 +1658,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 };
 
   const cycleGoalStatusOverride = (goalId: string) => {
-    const order: KeyResultStatus[] = ["started", "pending", "on-hold", "completed"];
+    const order: KeyResultStatus[] = ["on-hold", "started", "completed"];
     setGoals((prev) =>
       prev.map((goal) => {
         if (goal.id !== goalId) {
@@ -1692,9 +1694,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
     }
     if (goal.keyResults.some((kr) => kr.status === "on-hold")) {
       return "on-hold";
-    }
-    if (goal.keyResults.some((kr) => kr.status === "pending")) {
-      return "pending";
     }
     return "started";
   };
@@ -1911,9 +1910,28 @@ const goalStatusBadge = (status: KeyResultStatus) => {
     >
       <div className="space-y-6 pt-6">
         <div className="text-center">
-          <h2 className="text-4xl sm:text-3xl font-light uppercase tracking-[0.4em] text-foreground">
-            My Goals
-          </h2>
+          {isEditingGoalsSectionTitle ? (
+            <input
+              type="text"
+              value={goalsSectionTitle}
+              onChange={(e) => setGoalsSectionTitle(e.target.value)}
+              onBlur={() => setIsEditingGoalsSectionTitle(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setIsEditingGoalsSectionTitle(false);
+                }
+              }}
+              autoFocus
+              className="w-full border-b border-foreground bg-transparent text-center text-4xl sm:text-3xl font-light uppercase tracking-[0.4em] text-foreground outline-none"
+            />
+          ) : (
+            <h2
+              onClick={() => setIsEditingGoalsSectionTitle(true)}
+              className="text-4xl sm:text-3xl font-light uppercase tracking-[0.4em] text-foreground cursor-pointer transition hover:opacity-70"
+            >
+              {goalsSectionTitle}
+            </h2>
+          )}
         </div>
         {goals.length === 0 && (
           <p className="text-sm text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] text-center">
@@ -2042,19 +2060,15 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                             )}`}
                             title={kr.status === "started"
                               ? "Started"
-                              : kr.status === "pending"
-                                ? "Pending"
-                                : kr.status === "on-hold"
-                                  ? "On hold"
-                                  : "Completed"}
+                              : kr.status === "on-hold"
+                                ? "On hold"
+                                : "Completed"}
                           >
                             {kr.status === "started"
-                            ? "🚀"
-                            : kr.status === "pending"
-                              ? "⏳"
-                              : kr.status === "on-hold"
-                                ? "⏸️"
-                                : "✅"}
+                            ? "▶️"
+                            : kr.status === "on-hold"
+                              ? "⏸️"
+                              : "✅"}
                           </button>
                           {activeGoalCardId === goal.id && (
                             <button
@@ -2318,7 +2332,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   style={{ backgroundColor: "var(--card-muted-bg)" }}
                 >
                   <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-                    Weekly notes
+                    Weekly goals
                   </span>
                   <TinyEditor
                     key={selectedWeek !== null ? `week-notes-${productivityYear}-${selectedWeek}` : `productivity-goal-${productivityYear}`}
