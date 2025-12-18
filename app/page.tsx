@@ -734,7 +734,15 @@ export default function Home() {
           const data = await loadAllData();
 
           if (data) {
-            setGoals(data.goals ?? []);
+            // Remove duplicate goals (same title, case-insensitive)
+            const uniqueGoals = (data.goals ?? []).reduce((acc: Goal[], goal: Goal) => {
+              const isDuplicate = acc.some(g => g.title.toLowerCase() === goal.title.toLowerCase());
+              if (!isDuplicate) {
+                acc.push(goal);
+              }
+              return acc;
+            }, []);
+            setGoals(uniqueGoals);
             setScheduleEntries(normalizeScheduleEntryColors(data.scheduleEntries ?? {}));
             setProductivityRatings(data.productivityRatings ?? {});
             setWeeklyNotes(normalizeWeeklyNotes(data.weeklyNotes));
@@ -1269,6 +1277,14 @@ export default function Home() {
     if (!title) {
       return;
     }
+
+    // Check if a goal with the exact same title already exists
+    const duplicateExists = goals.some(goal => goal.title.toLowerCase() === title.toLowerCase());
+    if (duplicateExists) {
+      alert("A goal with this name already exists. Please use a different name.");
+      return;
+    }
+
     const timeframe = newGoalTimeframe.trim() || "This quarter";
     const nextGoal: Goal = {
       id: generateId(),
