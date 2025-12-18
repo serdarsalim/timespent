@@ -2807,7 +2807,7 @@ const WeeklyAllocationGrid = ({
 
 const ProductivityLegend = ({ className }: ProductivityLegendProps = {}) => (
   <div
-    className={`flex flex-wrap gap-3 rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-4 text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] sm:flex-nowrap ${className ?? ""}`}
+    className={`flex flex-wrap gap-3 rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-4 text-xs text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] sm:flex-nowrap ${className ?? ""}`}
   >
     {PRODUCTIVITY_SCALE.map((scale) => (
       <div key={scale.value} className="flex items-center gap-2 whitespace-nowrap">
@@ -3120,7 +3120,7 @@ const ProductivityGrid = ({
         );
         })}
       </div>
-      <div className="mt-6 flex items-center justify-between text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+      <div className="mt-6 flex items-center justify-between text-xs text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
         <div className="flex flex-wrap gap-3">
           {PRODUCTIVITY_SCALE.map((scale) => (
             <div key={scale.value} className="flex items-center gap-2 whitespace-nowrap">
@@ -3262,7 +3262,7 @@ const ProductivityGrid = ({
             </div>
           ))}
         </div>
-        <div className="mt-6 flex items-center justify-between text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+        <div className="mt-6 flex items-center justify-between text-xs text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
           <div className="flex flex-wrap gap-3">
             {PRODUCTIVITY_SCALE.map((scale) => (
               <div key={scale.value} className="flex items-center gap-2 whitespace-nowrap">
