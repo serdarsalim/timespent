@@ -2351,7 +2351,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                         toolbar: false,
                         content_style: `
                           body {
-                            background-color: #ebecf0 !important;
+                            background-color: #f1e9e5 !important;
                             color: #0f172a !important;
                             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                             font-size: 15px;
@@ -2484,7 +2484,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     "bold italic underline | bullist numlist | link removeformat",
                   content_style: `
                     body {
-                      background-color: #ebecf0 !important;
+                      background-color: #f1e9e5 !important;
                       color: #0f172a !important;
                       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                       font-size: 15px;
@@ -2776,7 +2776,7 @@ const WeeklyAllocationGrid = ({
         </p>
       </div>
       <div className="flex justify-center">
-        <div className="rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-4 w-full max-w-fit">
+        <div className="rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-white/90 dark:bg-gray-900/85 backdrop-blur-2xl p-4 w-full max-w-fit">
           <style dangerouslySetInnerHTML={{
             __html: `
               .time-allocation-grid {
@@ -2987,9 +2987,9 @@ const ProductivityGrid = ({
           const quarterColor =
             Math.floor(monthIndex / 3) % 2 === 0
               ? "text-[#5B8FF9]"
-              : "text-[#F6BD16]";
+              : "text-[#9b59b6]";
           return (
-            <span key={`month-${monthIndex}`} className={`text-center font-medium ${quarterColor}`}>
+            <span key={`month-${monthIndex}`} className={`text-center font-bold ${quarterColor}`}>
               {monthName}
             </span>
           );
