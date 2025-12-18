@@ -2324,7 +2324,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                       {
                         menubar: false,
                         statusbar: false,
-                        height: 440,
+                        height: 388,
                         license_key: "gpl",
                         plugins: "lists",
                         skin: theme === "dark" ? "oxide-dark" : "oxide",
@@ -2335,6 +2335,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                             background-color: #ebecf0 !important;
                             color: ${theme === "dark" ? "#f8fafc" : "#0f172a"} !important;
                             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                            font-size: 15px;
                             padding: 10px;
                             margin: 0;
                           }
@@ -2470,7 +2471,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 {
                   menubar: false,
                   statusbar: false,
-                  height: 320,
+                  height: 282,
                   license_key: "gpl",
                   skin: theme === "dark" ? "oxide-dark" : "oxide",
                   content_css: false,
@@ -2478,9 +2479,10 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     "bold italic underline | bullist numlist | link removeformat",
                   content_style: `
                     body {
-                      background-color: ${theme === "dark" ? "rgba(248, 250, 252, 0.04)" : "rgba(15, 23, 42, 0.04)"} !important;
+                      background-color: #ebecf0 !important;
                       color: ${theme === "dark" ? "#f8fafc" : "#0f172a"} !important;
                       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                      font-size: 15px;
                       padding: 10px;
                       margin: 0;
                     }
@@ -2579,7 +2581,7 @@ const AgeGrid = ({
   const allYears = Array.from({ length: totalYears }, (_, idx) => idx + 1);
 
   return (
-    <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+    <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3">
       {allYears.map((yearNumber) => (
         <YearRow
           key={`year-${yearNumber}`}
