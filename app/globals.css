@@ -38,6 +38,25 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
+.app-shell {
+  background: radial-gradient(
+      circle at 20% 20%,
+      color-mix(in srgb, var(--foreground) 6%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 80% 0%,
+      color-mix(in srgb, var(--foreground) 5%, transparent),
+      transparent 50%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--background) 88%, transparent),
+      color-mix(in srgb, var(--background) 96%, transparent)
+    ),
+    var(--background);
+}
+
 /* Productivity colors for light mode */
 .productivity-low {
   background-color: #fdfdf4;

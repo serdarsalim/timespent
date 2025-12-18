@@ -195,7 +195,7 @@ const defaultFocusAreas: FocusArea[] = [
   { id: "work", name: "Work", hours: "8" },
 ];
 
-type ViewMode = "life" | "productivity" | "goals";
+type ViewMode = "life" | "productivity";
 
 type KeyResultStatus = "started" | "pending" | "on-hold" | "completed";
 
@@ -364,7 +364,7 @@ export default function Home() {
     // Initialize from localStorage if available
     if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem("timespent-active-view");
-      if (stored === "productivity" || stored === "goals") {
+      if (stored === "productivity") {
         return stored;
       }
       if (stored === "life") {
@@ -797,7 +797,7 @@ export default function Home() {
         }
 
         const storedView = window.localStorage.getItem("timespent-active-view");
-        if (storedView === "life" || storedView === "productivity" || storedView === "goals") {
+        if (storedView === "life" || storedView === "productivity") {
           if (isLoggedIn) {
             setView(storedView);
           } else {
@@ -1911,7 +1911,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
     >
       <div className="space-y-6 pt-6">
         <div className="text-center">
-          <h2 className="text-3xl font-light uppercase tracking-[0.4em] text-foreground">
+          <h2 className="text-4xl sm:text-3xl font-light uppercase tracking-[0.4em] text-foreground">
             My Goals
           </h2>
         </div>
@@ -1961,7 +1961,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     <button
                       type="button"
                       onClick={() => beginGoalFieldEdit(goal, "title")}
-                      className="text-left text-2xl font-light text-foreground transition hover:text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
+                      className="text-left text-base sm:text-2xl font-light text-foreground transition hover:text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
                     >
                       {goal.title}
                     </button>
@@ -2037,17 +2037,24 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                             onClick={() =>
                               cycleKeyResultStatus(goal.id, kr.id)
                             }
-                            className={`rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em] ${goalStatusBadge(
+                            className={`rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-base sm:text-lg ${goalStatusBadge(
                               kr.status
                             )}`}
+                            title={kr.status === "started"
+                              ? "Started"
+                              : kr.status === "pending"
+                                ? "Pending"
+                                : kr.status === "on-hold"
+                                  ? "On hold"
+                                  : "Completed"}
                           >
                             {kr.status === "started"
-                            ? "Started"
+                            ? "🚀"
                             : kr.status === "pending"
-                              ? "Pending"
+                              ? "⏳"
                               : kr.status === "on-hold"
-                                ? "On hold"
-                                : "Completed"}
+                                ? "⏸️"
+                                : "✅"}
                           </button>
                           {activeGoalCardId === goal.id && (
                             <button
@@ -2170,7 +2177,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground transition-colors">
+    <div className="app-shell flex min-h-screen flex-col text-foreground transition-colors">
       <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] bg-background/95 px-4 py-3 text-sm backdrop-blur">
         <div className="flex flex-wrap items-center gap-4">
           <Link href="/" className="block">
@@ -2183,23 +2190,18 @@ const goalStatusBadge = (status: KeyResultStatus) => {
           <nav className="flex gap-2 text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
             <button
               type="button"
-              onClick={() => setView("productivity")}
-              className={`rounded-full px-4 py-1 transition ${
-                view === "productivity"
-                  ? "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-foreground"
-                  : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
-              }`}
+              onClick={() => {
+                setView("productivity");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className="rounded-full px-4 py-1 transition text-[color-mix(in_srgb,var(--foreground)_50%,transparent)] hover:text-foreground"
             >
               Track
             </button>
             <button
               type="button"
               onClick={scrollToGoalsSection}
-              className={`rounded-full px-4 py-1 transition ${
-                view === "goals"
-                  ? "bg-[color-mix(in_srgb,var(--foreground)_15%,transparent)] text-foreground"
-                  : "text-[color-mix(in_srgb,var(--foreground)_50%,transparent)]"
-              }`}
+              className="rounded-full px-4 py-1 transition text-[color-mix(in_srgb,var(--foreground)_50%,transparent)] hover:text-foreground"
             >
               Goals
             </button>
@@ -2221,8 +2223,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             </section>
           )}
 
-          {view === "goals" && renderGoalsSection()}
-
           {view === "productivity" && (
             <>
               <section className="mx-auto mt-8 grid max-w-[1920px] gap-8 text-left lg:grid-cols-[1fr_1.2fr]">
@@ -2242,7 +2242,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 </div>
 
                 <div className="flex flex-col rounded-3xl bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] p-4 order-1 lg:order-2">
-                <div className="mb-4 flex items-center justify-center gap-4 text-sm uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+                <div className="mb-4 flex items-center justify-center gap-2 sm:gap-4 text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
                   <button
                     type="button"
                     onClick={() => shiftSelectedWeek(-1)}
@@ -2251,7 +2251,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   >
                     ←
                   </button>
-                  <span className="font-semibold">Week {navbarWeekLabel}</span>
+                  <span className="font-semibold text-base sm:text-lg whitespace-nowrap">Week {navbarWeekLabel}</span>
                   <button
                     type="button"
                     onClick={() => shiftSelectedWeek(1)}
