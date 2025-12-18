@@ -68,13 +68,17 @@ export function UserInfo({ showLabel = false }: UserInfoProps) {
     );
   }
 
+  // When logged in, show nothing in navbar (sign out is in settings)
+  if (!showLabel) {
+    return null;
+  }
+
+  // Only show user info when showLabel is true (in settings/footer)
   return (
     <div className="flex items-center gap-3 text-sm">
-      {showLabel && (
-        <span className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-          Signed in as
-        </span>
-      )}
+      <span className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+        Signed in as
+      </span>
       <span className="text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
         {session.user.email}
       </span>
