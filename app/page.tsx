@@ -368,7 +368,7 @@ export default function Home() {
     Record<number, string>
   >({});
   const [productivityMode, setProductivityMode] =
-    useState<"day" | "week">("day");
+    useState<"day" | "week">("week");
   const [scheduleEntries, setScheduleEntries] = useState<
     Record<string, ScheduleEntry[]>
   >({});
