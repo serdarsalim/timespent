@@ -52,17 +52,17 @@ export function UserInfo({ showLabel = false }: UserInfoProps) {
         <a
           href="/api/auth/signin"
           onClick={openAuthPopup}
-          className="text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] hover:text-foreground cursor-pointer"
+          className="hidden cursor-pointer text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] hover:text-foreground sm:inline"
         >
           Sign in
         </a>
-        <span className="text-[color-mix(in_srgb,var(--foreground)_30%,transparent)]">
+        <span className="hidden text-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:inline">
           /
         </span>
         <a
           href="/api/auth/signin"
           onClick={openAuthPopup}
-          className="text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] hover:text-foreground cursor-pointer"
+          className="cursor-pointer rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-3 py-1 text-xs font-semibold text-foreground transition hover:border-foreground sm:border-0 sm:p-0 sm:text-sm sm:font-normal sm:text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] sm:hover:text-foreground"
           title="Create an account to save your goals and tracker data permanently. Demo data is not saved."
         >
           Sign up

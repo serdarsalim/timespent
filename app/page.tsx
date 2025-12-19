@@ -2511,16 +2511,16 @@ type ProductivityLegendProps = {
 
 const ProductivityLegend = ({ className }: ProductivityLegendProps = {}) => (
   <div
-    className={`flex flex-col gap-2 rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-4 text-xs text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] ${className ?? ""}`}
+    className={`flex flex-col gap-2 rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-4 text-[10px] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] sm:text-xs ${className ?? ""}`}
   >
-    <span className="text-[10px] uppercase tracking-[0.2em]">
+    <span className="whitespace-nowrap text-[9px] uppercase tracking-[0.2em] sm:text-[10px]">
       Goals achieved (self-rated)
     </span>
-    <div className="flex flex-wrap gap-3 sm:flex-nowrap">
+    <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
       {PRODUCTIVITY_SCALE.map((scale) => (
         <div key={scale.value} className="flex items-center gap-2 whitespace-nowrap">
           <span
-            className={`h-4 w-4 rounded ${scale.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)]`}
+            className={`h-3 w-3 rounded ${scale.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] sm:h-4 sm:w-4`}
             aria-hidden="true"
           />
           <span>{scale.label}</span>
@@ -2900,16 +2900,16 @@ const ProductivityGrid = ({
         );
         })}
       </div>
-      <div className="mt-6 flex items-center justify-between text-xs text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+      <div className="mt-6 flex items-center justify-between text-[10px] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] sm:text-xs">
         <div className="flex flex-col gap-2">
-          <span className="text-[10px] uppercase tracking-[0.2em]">
+          <span className="whitespace-nowrap text-[9px] uppercase tracking-[0.2em] sm:text-[10px]">
             Goals achieved (self-rated)
           </span>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
             {PRODUCTIVITY_SCALE.map((scale) => (
               <div key={scale.value} className="flex items-center gap-2 whitespace-nowrap">
                 <span
-                  className={`h-4 w-4 rounded ${scale.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)]`}
+                  className={`h-3 w-3 rounded ${scale.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] sm:h-4 sm:w-4`}
                   aria-hidden="true"
                 />
                 <span>{scale.label}</span>
@@ -2917,7 +2917,7 @@ const ProductivityGrid = ({
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
           {yearControl}
           {toggleButton}
         </div>
@@ -3030,16 +3030,16 @@ const ProductivityGrid = ({
             </div>
           ))}
         </div>
-        <div className="mt-6 flex items-center justify-between text-xs text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+        <div className="mt-6 flex items-center justify-between text-[10px] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] sm:text-xs">
           <div className="flex flex-col gap-2">
-            <span className="text-[10px] uppercase tracking-[0.2em]">
+            <span className="whitespace-nowrap text-[9px] uppercase tracking-[0.2em] sm:text-[10px]">
               Goals achieved (self-rated)
             </span>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
               {PRODUCTIVITY_SCALE.map((scale) => (
                 <div key={scale.value} className="flex items-center gap-2 whitespace-nowrap">
                   <span
-                    className={`h-4 w-4 rounded ${scale.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)]`}
+                    className={`h-3 w-3 rounded ${scale.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] sm:h-4 sm:w-4`}
                     aria-hidden="true"
                   />
                   <span>{scale.label}</span>
@@ -3047,7 +3047,7 @@ const ProductivityGrid = ({
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
             {yearControl}
             {toggleButton}
           </div>
