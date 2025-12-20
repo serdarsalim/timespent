@@ -2257,14 +2257,16 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 
   return (
     <div className="app-shell flex min-h-screen flex-col text-foreground transition-colors">
-      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b border-[color-mix(in_srgb,var(--foreground)_8%,transparent)] bg-white/30 dark:bg-gray-900/25 px-4 py-3 text-sm backdrop-blur-xl">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[color-mix(in_srgb,var(--foreground)_8%,transparent)] bg-white/30 dark:bg-gray-900/25 px-4 py-3 text-sm backdrop-blur-xl">
         <div className="flex flex-wrap items-center gap-4">
           <Link href="/" className="block">
-            <img
-              src="/app-logo.png"
-              alt={`${APP_NAME} logo`}
-              className="h-8 w-auto"
-            />
+            <div className="flex h-10 w-12 items-center justify-center rounded-2xl bg-[#111827]/90 shadow-[0_10px_30px_rgba(17,24,39,0.35)]">
+              <img
+                src="/app-logo.png"
+                alt={`${APP_NAME} logo`}
+                className="h-8 w-11 object-contain"
+              />
+            </div>
           </Link>
           <nav className="flex gap-2 text-sm font-bold uppercase tracking-[0.2em]">
             <button
@@ -2508,7 +2510,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 
           <div className="flex flex-1 justify-center text-center">
             <div>
-              <p className="text-base font-medium text-foreground">{APP_NAME}</p>
+              <p className="text-base font-medium text-foreground">© {new Date().getFullYear()} {APP_NAME}</p>
               <p className="text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
                 Personal goal and productivity tracker
               </p>
@@ -2815,7 +2817,7 @@ const ProductivityGrid = ({
               ? "text-[#5B8FF9]"
               : "text-[#9b59b6]";
           return (
-            <span key={`month-${monthIndex}`} className={`text-center font-bold ${quarterColor}`}>
+            <span key={`month-${monthIndex}`} className={`text-center font-medium sm:font-bold ${quarterColor}`}>
               {monthName}
             </span>
           );
@@ -2989,7 +2991,7 @@ const ProductivityGrid = ({
                 ? "text-[#5B8FF9]"
                 : "text-[#9b59b6]";
             return (
-              <span key={`week-month-${monthIndex}`} className={`text-center font-bold ${quarterColor}`}>
+              <span key={`week-month-${monthIndex}`} className={`text-center font-medium sm:font-bold ${quarterColor}`}>
                 {monthName}
               </span>
             );
