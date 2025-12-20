@@ -70,6 +70,9 @@ body {
 .productivity-high {
   background-color: #84c400 !important;
 }
+.productivity-top {
+  background-color: #38b000 !important;
+}
 
 /* Productivity colors for dark mode */
 :root[data-theme="dark"] .productivity-low {
@@ -80,6 +83,9 @@ body {
 }
 :root[data-theme="dark"] .productivity-high {
   background-color: #10b981 !important;
+}
+:root[data-theme="dark"] .productivity-top {
+  background-color: #22c55e !important;
 }
 
 /* Day grid border colors for dark mode */

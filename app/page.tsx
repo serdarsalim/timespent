@@ -210,11 +210,23 @@ const TinyEditor = dynamic(
 );
 const TINYMCE_CDN =
   "https://cdnjs.cloudflare.com/ajax/libs/tinymce/8.1.2/tinymce.min.js";
-const PRODUCTIVITY_SCALE = [
+type ProductivityScaleEntry = {
+  value: number;
+  label: string;
+  color: string;
+};
+
+const PRODUCTIVITY_SCALE_THREE: ProductivityScaleEntry[] = [
   { value: 0, label: "<25%", color: "productivity-low" },
   { value: 1, label: "25-50%", color: "productivity-medium" },
   { value: 2, label: ">50%", color: "productivity-high" },
-  // { value: 3, label: ">75%", color: "bg-[#66bd63]" }, // Hidden for now
+];
+
+const PRODUCTIVITY_SCALE_FOUR: ProductivityScaleEntry[] = [
+  { value: 0, label: "<25%", color: "productivity-low" },
+  { value: 1, label: "25-50%", color: "productivity-medium" },
+  { value: 2, label: "50-75%", color: "productivity-high" },
+  { value: 3, label: ">75%", color: "productivity-top" },
 ];
 
 type WeekMeta = {
@@ -369,6 +381,12 @@ export default function Home() {
   >({});
   const [productivityMode, setProductivityMode] =
     useState<"day" | "week">("week");
+  const [productivityScaleMode, setProductivityScaleMode] =
+    useState<"3" | "4">("3");
+  const productivityScale = useMemo(
+    () => (productivityScaleMode === "4" ? PRODUCTIVITY_SCALE_FOUR : PRODUCTIVITY_SCALE_THREE),
+    [productivityScaleMode]
+  );
   const [scheduleEntries, setScheduleEntries] = useState<
     Record<string, ScheduleEntry[]>
   >({});
@@ -722,6 +740,7 @@ export default function Home() {
             let nextGoalsSectionTitle = goalsSectionTitle;
             let nextPersonName = "";
             let nextDateOfBirth = "";
+            let nextProductivityScaleMode: "3" | "4" = productivityScaleMode;
 
             if (profile) {
               nextPersonName = profile.personName ?? "";
@@ -743,6 +762,10 @@ export default function Home() {
               if (profile.productivityViewMode !== undefined) {
                 setProductivityMode(profile.productivityViewMode as "day" | "week");
               }
+              if (profile.productivityScaleMode === "3" || profile.productivityScaleMode === "4") {
+                nextProductivityScaleMode = profile.productivityScaleMode;
+                setProductivityScaleMode(nextProductivityScaleMode);
+              }
 
               const complete = Boolean(profile.personName);
               shouldOpenProfileModal = !complete;
@@ -755,7 +778,8 @@ export default function Home() {
               dateOfBirth: nextDateOfBirth.trim() ? nextDateOfBirth : null,
               weekStartDay: nextWeekStartDay,
               recentYears: nextRecentYears,
-              goalsSectionTitle: nextGoalsSectionTitle
+              goalsSectionTitle: nextGoalsSectionTitle,
+              productivityScaleMode: nextProductivityScaleMode
             };
             lastServerSavedProfileRef.current = JSON.stringify(profilePayload);
           }
@@ -859,7 +883,8 @@ export default function Home() {
       dateOfBirth: dateOfBirth || null,
       weekStartDay,
       recentYears,
-      goalsSectionTitle
+      goalsSectionTitle,
+      productivityScaleMode
     };
     const serializedProfile = JSON.stringify(profilePayload);
     if (lastServerSavedProfileRef.current === serializedProfile) {
@@ -874,7 +899,7 @@ export default function Home() {
         console.error("Failed to save profile", error);
       }
     })();
-  }, [personName, dateOfBirth, email, weekStartDay, recentYears, goalsSectionTitle, isHydrated, userEmail, isDemoMode]);
+  }, [personName, dateOfBirth, email, weekStartDay, recentYears, goalsSectionTitle, productivityScaleMode, isHydrated, userEmail, isDemoMode]);
 
   useEffect(() => {
     try {
@@ -2286,6 +2311,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     setYear={setProductivityYear}
                     ratings={productivityRatings}
                     setRatings={setProductivityRatings}
+                    scale={productivityScale}
                     mode={productivityMode}
                     onToggleMode={() => {
                       const newMode = productivityMode === "day" ? "week" : "day";
@@ -2298,6 +2324,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                           weekStartDay,
                           recentYears,
                           goalsSectionTitle,
+                          productivityScaleMode,
                           productivityViewMode: newMode,
                         });
                       }
@@ -2447,6 +2474,22 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   className="mt-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-4 py-1.5 text-sm text-foreground outline-none focus:border-foreground"
                 />
               </label>
+              <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                Rating scale
+                <div className="mt-1 flex items-center justify-between rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] px-4 py-2">
+                  <span className="text-sm normal-case tracking-normal text-foreground">
+                    Enable 4-tier scale ({">"}75%)
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={productivityScaleMode === "4"}
+                    onChange={(event) =>
+                      setProductivityScaleMode(event.target.checked ? "4" : "3")
+                    }
+                    className="h-4 w-4 accent-foreground"
+                  />
+                </div>
+              </label>
             </div>
           </div>
         </div>
@@ -2507,9 +2550,10 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 
 type ProductivityLegendProps = {
   className?: string;
+  scale: ProductivityScaleEntry[];
 };
 
-const ProductivityLegend = ({ className }: ProductivityLegendProps = {}) => (
+const ProductivityLegend = ({ className, scale }: ProductivityLegendProps) => (
   <div
     className={`flex flex-col gap-2 rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-4 text-[10px] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] sm:text-xs ${className ?? ""}`}
   >
@@ -2517,13 +2561,13 @@ const ProductivityLegend = ({ className }: ProductivityLegendProps = {}) => (
       Goals achieved (self-rated)
     </span>
     <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
-      {PRODUCTIVITY_SCALE.map((scale) => (
-        <div key={scale.value} className="flex items-center gap-2 whitespace-nowrap">
+      {scale.map((item) => (
+        <div key={item.value} className="flex items-center gap-2 whitespace-nowrap">
           <span
-            className={`h-3 w-3 rounded ${scale.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] sm:h-4 sm:w-4`}
+            className={`h-3 w-3 rounded ${item.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] sm:h-4 sm:w-4`}
             aria-hidden="true"
           />
-          <span>{scale.label}</span>
+          <span>{item.label}</span>
         </div>
       ))}
     </div>
@@ -2535,6 +2579,7 @@ type ProductivityGridProps = {
   setYear: React.Dispatch<React.SetStateAction<number>>;
   ratings: Record<string, number | null>;
   setRatings: React.Dispatch<React.SetStateAction<Record<string, number | null>>>;
+  scale: ProductivityScaleEntry[];
   mode: "day" | "week";
   onToggleMode: () => void;
   selectedWeek: number | null;
@@ -2546,6 +2591,7 @@ const ProductivityGrid = ({
   setYear,
   ratings,
   setRatings,
+  scale,
   mode,
   onToggleMode,
   selectedWeek,
@@ -2675,7 +2721,7 @@ const ProductivityGrid = ({
       let next: number | null;
       if (current === undefined || current === null) {
         next = 0;
-      } else if (current >= PRODUCTIVITY_SCALE.length - 1) {
+      } else if (current >= scale.length - 1) {
         next = null;
       } else {
         next = (current + 1) as number;
@@ -2696,7 +2742,7 @@ const ProductivityGrid = ({
         let next: number | null;
         if (current === undefined || current === null) {
           next = 0;
-        } else if (current >= PRODUCTIVITY_SCALE.length - 1) {
+        } else if (current >= scale.length - 1) {
           next = null;
         } else {
           next = (current + 1) as number;
@@ -2809,8 +2855,8 @@ const ProductivityGrid = ({
               const storedValue = ratings[key];
               const hasValue =
                 storedValue !== null && storedValue !== undefined;
-              const currentValue = hasValue ? Math.min(storedValue!, PRODUCTIVITY_SCALE.length - 1) : 0;
-              const scale = PRODUCTIVITY_SCALE[currentValue];
+              const currentValue = hasValue ? Math.min(storedValue!, scale.length - 1) : 0;
+              const scaleEntry = scale[currentValue];
               const validDay =
                 dayOfMonth <= daysInMonth(year, monthIndex);
 
@@ -2881,7 +2927,7 @@ const ProductivityGrid = ({
                   }}
                   className={`h-4 w-full text-[10px] font-semibold text-transparent transition focus:text-transparent ${weekBorderClass} ${
                     hasValue
-                      ? scale.color
+                      ? scaleEntry.color
                       : "bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
                   } ${
                     isToday
@@ -2890,7 +2936,7 @@ const ProductivityGrid = ({
                   }`}
                   aria-label={`Day ${dayOfMonth} of ${new Date(2020, monthIndex).toLocaleString(undefined, {
                     month: "long",
-                  })}, rating ${scale.label}`}
+                  })}, rating ${scaleEntry.label}`}
                 >
                   {hasValue ? currentValue : ""}
                 </button>
@@ -2906,13 +2952,13 @@ const ProductivityGrid = ({
             Goals achieved (self-rated)
           </span>
           <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
-            {PRODUCTIVITY_SCALE.map((scale) => (
-              <div key={scale.value} className="flex items-center gap-2 whitespace-nowrap">
+            {scale.map((item) => (
+              <div key={item.value} className="flex items-center gap-2 whitespace-nowrap">
                 <span
-                  className={`h-3 w-3 rounded ${scale.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] sm:h-4 sm:w-4`}
+                  className={`h-3 w-3 rounded ${item.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] sm:h-4 sm:w-4`}
                   aria-hidden="true"
                 />
-                <span>{scale.label}</span>
+                <span>{item.label}</span>
               </div>
             ))}
           </div>
@@ -2987,16 +3033,16 @@ const ProductivityGrid = ({
                   ? Math.max(
                       0,
                       Math.min(
-                        PRODUCTIVITY_SCALE.length - 1,
+                        scale.length - 1,
                         Math.round(dayAverage ?? 0)
                       )
                     )
                   : manualScore !== null && manualScore !== undefined
-                    ? Math.min(manualScore, PRODUCTIVITY_SCALE.length - 1)
+                    ? Math.min(manualScore, scale.length - 1)
                     : null;
                 const scaleClass =
                   colorIndex !== null && colorIndex !== undefined
-                    ? PRODUCTIVITY_SCALE[colorIndex].color
+                    ? scale[colorIndex].color
                     : "bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)]";
                 return (
                   <div key={`week-card-${week.weekNumber}`}>
@@ -3036,13 +3082,13 @@ const ProductivityGrid = ({
               Goals achieved (self-rated)
             </span>
             <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
-              {PRODUCTIVITY_SCALE.map((scale) => (
-                <div key={scale.value} className="flex items-center gap-2 whitespace-nowrap">
+              {scale.map((item) => (
+                <div key={item.value} className="flex items-center gap-2 whitespace-nowrap">
                   <span
-                    className={`h-3 w-3 rounded ${scale.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] sm:h-4 sm:w-4`}
+                    className={`h-3 w-3 rounded ${item.color} border border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] sm:h-4 sm:w-4`}
                     aria-hidden="true"
                   />
-                  <span>{scale.label}</span>
+                  <span>{item.label}</span>
                 </div>
               ))}
             </div>

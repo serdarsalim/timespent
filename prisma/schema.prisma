@@ -74,6 +74,7 @@ model UserProfile {
   recentYears   String   @default("10")
   goalsSectionTitle String @default("2026 GOALS")
   productivityViewMode String @default("day")
+  productivityScaleMode String @default("3")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

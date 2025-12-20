@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
           recentYears: profile.recentYears || '10',
           goalsSectionTitle: profile.goalsSectionTitle || '2026 GOALS',
           productivityViewMode: profile.productivityViewMode || 'day',
+          productivityScaleMode: profile.productivityScaleMode || '3',
         }
       })
     } else {
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
           recentYears: profile.recentYears || '10',
           goalsSectionTitle: profile.goalsSectionTitle || '2026 GOALS',
           productivityViewMode: profile.productivityViewMode || 'day',
+          productivityScaleMode: profile.productivityScaleMode || '3',
         }
       })
     }
