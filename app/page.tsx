@@ -521,6 +521,13 @@ export default function Home() {
     showOkrs: true,
   });
   const [isShareOptionsOpen, setIsShareOptionsOpen] = useState(false);
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+  const [printOptions, setPrintOptions] = useState({
+    showCalendar: true,
+    showDosDonts: true,
+    showWeeklyGoals: true,
+    showOkrs: true,
+  });
   const [activeShareOptionsId, setActiveShareOptionsId] = useState<string | null>(null);
   const [shareEditOptions, setShareEditOptions] = useState({
     showSelfRating: true,
@@ -1738,6 +1745,13 @@ export default function Home() {
     }
   };
 
+  const handlePrint = () => {
+    setIsPrintOptionsOpen(false);
+    window.setTimeout(() => {
+      window.print();
+    }, 0);
+  };
+
   const handleRevokeShare = async (shareId: string) => {
     const previousShares = sharedByMe;
     setSharedByMe((prev) => prev.filter((share) => share.id !== shareId));
@@ -2863,7 +2877,10 @@ const goalStatusBadge = (status: KeyResultStatus) => {
           {view === "productivity" && (
             <>
               <section className="mx-auto mt-8 grid max-w-480 gap-8 text-left lg:grid-cols-[1fr_1.2fr]">
-                <div className="space-y-4 order-2 lg:order-1">
+                <div
+                  className="space-y-4 order-2 lg:order-1"
+                  data-print-hidden={printOptions.showCalendar ? "false" : "true"}
+                >
                   <ProductivityGrid
                     year={productivityYear}
                     setYear={setProductivityYear}
@@ -2908,14 +2925,25 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 
                 <div className="flex flex-col rounded-3xl px-4 pb-4 pt-0 order-1 lg:order-2">
                 {productivityMode === "day" && dosDontsPanel ? (
-                  <div className="mb-4">{dosDontsPanel}</div>
+                  <div
+                    className="mb-4"
+                    data-print-hidden={printOptions.showDosDonts ? "false" : "true"}
+                  >
+                    {dosDontsPanel}
+                  </div>
                 ) : null}
                 {productivityMode === "week" && dosDontsPanel ? (
-                  <div className="mb-4 lg:hidden">{dosDontsPanel}</div>
+                  <div
+                    className="mb-4 lg:hidden"
+                    data-print-hidden={printOptions.showDosDonts ? "false" : "true"}
+                  >
+                    {dosDontsPanel}
+                  </div>
                 ) : null}
                 <div
                   className="flex-1 rounded-2xl px-4 pt-4 pb-4"
                   style={{ backgroundColor: "var(--card-muted-bg)" }}
+                  data-print-hidden={printOptions.showWeeklyGoals ? "false" : "true"}
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <span className="block text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
@@ -2995,7 +3023,9 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 </div>
                 </div>
               </section>
-              {renderGoalsSection("mt-12", goalsSectionRef)}
+              <div data-print-hidden={printOptions.showOkrs ? "false" : "true"}>
+                {renderGoalsSection("mt-12", goalsSectionRef)}
+              </div>
             </>
           )}
 
@@ -3351,7 +3381,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 
       {isShareOptionsOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 print-hidden"
           onClick={() => setIsShareOptionsOpen(false)}
           role="dialog"
           aria-modal="true"
@@ -3409,7 +3439,67 @@ const goalStatusBadge = (status: KeyResultStatus) => {
         </div>
       ) : null}
 
-      <footer className="mt-24 bg-slate-900 text-white px-6 md:px-24 py-8 text-sm">
+      {isPrintOptionsOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 print-hidden"
+          onClick={() => setIsPrintOptionsOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-md rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-background p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                Print includes
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsPrintOptionsOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2 text-sm text-foreground">
+              {[
+                { key: "showCalendar", label: "Calendar" },
+                { key: "showDosDonts", label: "Do's & Don'ts" },
+                { key: "showWeeklyGoals", label: "Weekly goals" },
+                { key: "showOkrs", label: "OKRs" },
+              ].map((option) => (
+                <label
+                  key={option.key}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] px-4 py-3"
+                >
+                  <span>{option.label}</span>
+                  <input
+                    type="checkbox"
+                    checked={printOptions[option.key as keyof typeof printOptions]}
+                    onChange={(event) =>
+                      setPrintOptions((prev) => ({
+                        ...prev,
+                        [option.key]: event.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 accent-foreground"
+                  />
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="mt-5 w-full rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] px-4 py-2 text-xs uppercase tracking-[0.3em] text-foreground transition hover:border-foreground"
+            >
+              Print
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <footer className="mt-24 bg-slate-900 text-white px-6 md:px-24 py-8 text-sm print-hidden">
         <div className="flex flex-col items-center gap-8 text-center">
           <div className="order-2 flex flex-1 justify-center text-center">
             <div>
@@ -3436,6 +3526,16 @@ const goalStatusBadge = (status: KeyResultStatus) => {
               aria-pressed={isShareEditorVisible}
             >
               🔗
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPrintOptionsOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 text-lg text-white transition hover:border-white"
+              aria-label="Print"
+            >
+              <span role="img" aria-hidden="true">
+                🖨️
+              </span>
             </button>
             <button
               type="button"

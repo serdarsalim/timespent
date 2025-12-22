@@ -136,6 +136,22 @@ body {
   border-right-color: #4b5563 !important; /* gray-600 */
 }
 
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+
+  .app-shell,
+  .app-shell::before {
+    background: none !important;
+  }
+
+  .print-hidden,
+  [data-print-hidden="true"] {
+    display: none !important;
+  }
+}
+
 .okr-card {
   position: relative;
   overflow: hidden;
