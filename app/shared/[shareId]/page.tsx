@@ -200,6 +200,79 @@ const ProductivityGrid = ({
       monthWeeks.sort((a, b) => a.weekNumber - b.weekNumber)
     );
   }, [weeks]);
+  const [isYearMenuOpen, setIsYearMenuOpen] = useState(false);
+  const yearMenuRef = useRef<HTMLDivElement | null>(null);
+  const yearOptions = useMemo(() => [year - 1, year, year + 1], [year]);
+
+  useEffect(() => {
+    if (!isYearMenuOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (!yearMenuRef.current) return;
+      if (event.target instanceof Node && !yearMenuRef.current.contains(event.target)) {
+        setIsYearMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsYearMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isYearMenuOpen]);
+
+  const yearControl = (
+    <div ref={yearMenuRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsYearMenuOpen((prev) => !prev)}
+        className="flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-foreground"
+        aria-label="Select year"
+        aria-expanded={isYearMenuOpen}
+      >
+        {year}
+        <svg
+          aria-hidden="true"
+          className={`h-3 w-3 transition ${isYearMenuOpen ? "rotate-180" : ""}`}
+          viewBox="0 0 20 20"
+          fill="none"
+        >
+          <path
+            d="M5 7l5 6 5-6"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {isYearMenuOpen ? (
+        <div className="absolute right-0 z-10 mt-2 w-36 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-background p-1 shadow-lg">
+          {yearOptions.map((optionYear) => (
+            <button
+              key={optionYear}
+              type="button"
+              onClick={() => {
+                setYear(optionYear);
+                setIsYearMenuOpen(false);
+              }}
+              className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                optionYear === year
+                  ? "bg-foreground text-background"
+                  : "text-foreground hover:bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)]"
+              }`}
+            >
+              <span>{optionYear}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 
   const daysInMonth = (targetYear: number, monthIndex: number) => {
     return new Date(targetYear, monthIndex + 1, 0).getDate();
@@ -435,20 +508,7 @@ const ProductivityGrid = ({
           </div>
         )}
         <div className={`flex items-start gap-2 ${showLegend ? "flex-col sm:flex-row sm:items-center sm:gap-3" : "flex-row items-center"}`}>
-          <button
-            type="button"
-            onClick={() => setYear((prev) => prev - 1)}
-            className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-foreground"
-          >
-            {year - 1}
-          </button>
-          <button
-            type="button"
-            onClick={() => setYear((prev) => prev + 1)}
-            className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-foreground"
-          >
-            {year + 1}
-          </button>
+          {yearControl}
           <button
             type="button"
             onClick={onToggleMode}
@@ -581,25 +641,12 @@ const ProductivityGrid = ({
               </div>
             </div>
           )}
-          <div className={`flex items-start gap-2 ${showLegend ? "flex-col sm:flex-row sm:items-center sm:gap-3" : "flex-row items-center"}`}>
-            <button
-              type="button"
-              onClick={() => setYear((prev) => prev - 1)}
-              className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-foreground"
-            >
-              {year - 1}
-            </button>
-            <button
-              type="button"
-              onClick={() => setYear((prev) => prev + 1)}
-              className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-foreground"
-            >
-              {year + 1}
-            </button>
-            <button
-              type="button"
-              onClick={onToggleMode}
-              className="flex items-center rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-foreground"
+        <div className={`flex items-start gap-2 ${showLegend ? "flex-col sm:flex-row sm:items-center sm:gap-3" : "flex-row items-center"}`}>
+          {yearControl}
+          <button
+            type="button"
+            onClick={onToggleMode}
+            className="flex items-center rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-foreground"
             >
               {mode === "week" ? "Week" : "Day"}
             </button>
