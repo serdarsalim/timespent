@@ -2663,13 +2663,13 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 
       {isProfileEditorVisible && (
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 px-4"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-4 overflow-y-auto"
           onClick={() => setIsEditingProfile(false)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="w-full max-w-3xl rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-background p-6 text-left shadow-2xl"
+            className="w-full max-w-3xl rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-background p-6 text-left shadow-2xl my-8 max-h-[90vh] overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
@@ -2693,7 +2693,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 </div>
               )}
               <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-                Full name
                 <input
                   type="text"
                   value={personName}
@@ -2703,7 +2702,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 />
               </label>
               <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-                Rating scale
                 <div className="mt-1 flex items-center justify-between rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] px-4 py-2">
                   <span className="text-sm normal-case tracking-normal text-foreground">
                     Enable 4-tier scale ({">"}75%)
@@ -2719,7 +2717,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 </div>
               </label>
               <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-                Show legend
                 <div className="mt-1 flex items-center justify-between rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] px-4 py-2">
                   <span className="text-sm normal-case tracking-normal text-foreground">
                     Show goals achieved legend
@@ -2733,14 +2730,16 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 </div>
               </label>
               <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] lg:col-span-2">
-                Week starts on
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                    Week starts
+                  </span>
                   {[0, 1].map((day) => (
                     <button
                       key={day}
                       type="button"
                       onClick={() => setWeekStartDay(day as WeekdayIndex)}
-                      className={`rounded-full border px-4 py-1.5 text-xs transition ${
+                      className={`rounded-full border px-3 py-1 text-[10px] transition sm:px-4 sm:py-1.5 sm:text-xs ${
                         weekStartDay === day
                           ? "border-foreground text-foreground"
                           : "border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] hover:border-foreground"
