@@ -251,22 +251,82 @@ const getWeekStart = (date: Date, weekStartDay: WeekdayIndex = 1) => {
 const formatDayKey = (date: Date) =>
   `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 
-const formatWeekKey = (weekStart: Date) => `week-${formatDayKey(weekStart)}`;
+const formatWeekKey = (weekStart: Date, weekStartDay: WeekdayIndex) =>
+  `week-${weekStartDay}-${formatDayKey(weekStart)}`;
 
-const parseWeekKey = (key: string): Date | null => {
-  const match = /^week-(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(key);
+const parseWeekKey = (key: string): { weekStart: Date; weekStartDay: WeekdayIndex } | null => {
+  const match = /^week-(\d)-(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(key);
   if (!match) {
     return null;
   }
-  const [, yearStr, monthStr, dayStr] = match;
+  const [, weekStartDayStr, yearStr, monthStr, dayStr] = match;
+  const weekStartDay = Number(weekStartDayStr);
   const year = Number(yearStr);
   const month = Number(monthStr);
   const day = Number(dayStr);
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+  if (
+    !Number.isFinite(weekStartDay) ||
+    weekStartDay < 0 ||
+    weekStartDay > 6 ||
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day)
+  ) {
     return null;
   }
   const parsed = new Date(year, month - 1, day);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return { weekStart: parsed, weekStartDay: weekStartDay as WeekdayIndex };
+};
+
+const isLegacyWeekKey = (key: string) =>
+  /^week-(\d{4})-(\d{1,2})-(\d{1,2})$/.test(key);
+
+const remapWeekKeys = <T,>(
+  entries: Record<string, T>,
+  nextWeekStartDay: WeekdayIndex
+): Record<string, T> => {
+  const remapped: Record<string, T> = {};
+  for (const [key, value] of Object.entries(entries)) {
+    const parsed = parseWeekKey(key);
+    if (parsed) {
+      // Anchor to mid-week so switching start day shifts forward/backward intuitively.
+      const anchor = new Date(parsed.weekStart);
+      anchor.setDate(anchor.getDate() + 3);
+      const nextWeekStart = getWeekStart(anchor, nextWeekStartDay);
+      const nextKey = formatWeekKey(nextWeekStart, nextWeekStartDay);
+      remapped[nextKey] = value;
+      continue;
+    }
+    remapped[key] = value;
+  }
+  return remapped;
+};
+
+const migrateWeekKeys = <T,>(
+  entries: Record<string, T>,
+  weekStartDay: WeekdayIndex
+): { migrated: Record<string, T>; didMigrate: boolean } => {
+  const migrated: Record<string, T> = {};
+  let didMigrate = false;
+
+  for (const [key, value] of Object.entries(entries)) {
+    if (isLegacyWeekKey(key)) {
+      const nextKey = `week-${weekStartDay}-${key.slice("week-".length)}`;
+      if (!(nextKey in migrated)) {
+        migrated[nextKey] = value;
+      }
+      didMigrate = true;
+      continue;
+    }
+    if (!(key in migrated)) {
+      migrated[key] = value;
+    }
+  }
+
+  return { migrated, didMigrate };
 };
 
 const formatISOWeekInputValue = (date: Date) => {
@@ -359,7 +419,7 @@ const buildWeeksForYear = (year: number, weekStartDay: WeekdayIndex): WeekMeta[]
         dayKeys,
         primaryMonth: Number(primaryMonth),
         rangeLabel,
-        weekKey: formatWeekKey(weekStart),
+        weekKey: formatWeekKey(weekStart, weekStartDay),
         weekStart: new Date(weekStart),
       });
       weekCounter += 1;
@@ -448,6 +508,7 @@ export default function Home() {
   const okrCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, WeeklyNoteEntry>>({});
   const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
+  const lastWeekStartDayRef = useRef<WeekdayIndex | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const goalsSectionRef = useRef<HTMLDivElement | null>(null);
   const lastProcessedScheduleRef = useRef<string | null>(null);
@@ -788,20 +849,34 @@ export default function Home() {
               setWeekStartDay(1);
             }
 
+            const migrationKey = `timespent-weekkey-migration-done-${session?.user?.email ?? "unknown"}`;
+            const hasMigratedWeekKeys =
+              window.localStorage.getItem(migrationKey) === "true";
+
             const productivityData = data.productivityRatings ?? {};
-            setProductivityRatings(productivityData);
-            const serializedProductivity = JSON.stringify(productivityData);
-            lastProcessedProductivityRef.current = serializedProductivity;
-            lastServerSavedProductivityRef.current = serializedProductivity;
-            pendingProductivityRef.current = productivityData;
+            const migratedProductivity = hasMigratedWeekKeys
+              ? { migrated: productivityData, didMigrate: false }
+              : migrateWeekKeys(productivityData, nextWeekStartDay);
+            setProductivityRatings(migratedProductivity.migrated);
+            const serializedProductivity = JSON.stringify(migratedProductivity.migrated);
+            lastProcessedProductivityRef.current = migratedProductivity.didMigrate ? null : serializedProductivity;
+            lastServerSavedProductivityRef.current = migratedProductivity.didMigrate ? null : serializedProductivity;
+            pendingProductivityRef.current = migratedProductivity.migrated;
 
             const weeklyNotesData = data.weeklyNotes ?? {};
-            const normalizedWeekly = normalizeWeeklyNotes(weeklyNotesData);
+            const migratedWeekly = hasMigratedWeekKeys
+              ? { migrated: weeklyNotesData, didMigrate: false }
+              : migrateWeekKeys(weeklyNotesData, nextWeekStartDay);
+            const normalizedWeekly = normalizeWeeklyNotes(migratedWeekly.migrated);
             setWeeklyNotes(normalizedWeekly);
             const serializedWeekly = JSON.stringify(normalizedWeekly);
-            lastProcessedWeeklyNotesRef.current = serializedWeekly;
-            lastServerSavedWeeklyNotesRef.current = serializedWeekly;
+            lastProcessedWeeklyNotesRef.current = migratedWeekly.didMigrate ? null : serializedWeekly;
+            lastServerSavedWeeklyNotesRef.current = migratedWeekly.didMigrate ? null : serializedWeekly;
             pendingWeeklyNotesRef.current = normalizedWeekly;
+
+            if (migratedProductivity.didMigrate || migratedWeekly.didMigrate) {
+              window.localStorage.setItem(migrationKey, "true");
+            }
 
             const profilePayload = {
               personName: nextPersonName.trim() ? nextPersonName : null,
@@ -1153,6 +1228,27 @@ export default function Home() {
     () => (selectedWeekKey ? weeksForYear.find((week) => week.weekKey === selectedWeekKey) : null),
     [selectedWeekKey, weeksForYear]
   );
+
+  useEffect(() => {
+    setSelectedWeekKey(null);
+  }, [weekStartDay]);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+    if (lastWeekStartDayRef.current === null) {
+      lastWeekStartDayRef.current = weekStartDay;
+      return;
+    }
+    if (lastWeekStartDayRef.current === weekStartDay) {
+      return;
+    }
+
+    setProductivityRatings((prev) => remapWeekKeys(prev, weekStartDay));
+    setWeeklyNotes((prev) => remapWeekKeys(prev, weekStartDay));
+    lastWeekStartDayRef.current = weekStartDay;
+  }, [weekStartDay, isHydrated]);
 
   // Set current week as selected by default when viewing productivity tracker
   useEffect(() => {
@@ -1823,8 +1919,8 @@ const goalStatusBadge = (status: KeyResultStatus) => {
     if (!parsed) {
       return null;
     }
-    parsed.setDate(parsed.getDate() - 7);
-    return formatWeekKey(parsed);
+    parsed.weekStart.setDate(parsed.weekStart.getDate() - 7);
+    return formatWeekKey(parsed.weekStart, parsed.weekStartDay);
   };
 
   const getWeekEntryWithCarryover = (weekKey: string | null): WeeklyNoteEntry | null => {
@@ -2500,6 +2596,25 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     }
                     className="h-4 w-4 accent-foreground"
                   />
+                </div>
+              </label>
+              <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                Week starts on
+                <div className="mt-1 flex items-center gap-2">
+                  {[0, 1].map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => setWeekStartDay(day as WeekdayIndex)}
+                      className={`rounded-full border px-4 py-1.5 text-xs transition ${
+                        weekStartDay === day
+                          ? "border-foreground text-foreground"
+                          : "border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] hover:border-foreground"
+                      }`}
+                    >
+                      {day === 0 ? "Sunday" : "Monday"}
+                    </button>
+                  ))}
                 </div>
               </label>
             </div>
