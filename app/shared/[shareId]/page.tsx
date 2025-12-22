@@ -815,7 +815,7 @@ export default function SharedPage({
                 ratings={data.productivityRatings}
                 scale={scale}
                 mode={productivityMode}
-                showLegend={data.profile.showLegend}
+                showLegend
                 selectedWeekKey={selectedWeekKey}
                 setSelectedWeekKey={setSelectedWeekKey}
                 weekStartDay={data.profile.weekStartDay}
