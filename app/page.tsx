@@ -533,6 +533,8 @@ export default function Home() {
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, WeeklyNoteEntry>>({});
   const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
   const lastWeekStartDayRef = useRef<WeekdayIndex | null>(null);
+  const dosTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const dontsTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const goalsSectionRef = useRef<HTMLDivElement | null>(null);
   const lastProcessedScheduleRef = useRef<string | null>(null);
@@ -2044,6 +2046,17 @@ const goalStatusBadge = (status: KeyResultStatus) => {
     selectedWeekEntry?.content?.replace(/<[^>]*>/g, "").trim() ?? "";
   const templateContentText = weeklyGoalsTemplate.replace(/<[^>]*>/g, "").trim();
   const isWeeklyGoalsEmpty = selectedWeekKey ? selectedWeekContentText.length === 0 : true;
+
+  const resizeTextareaToFit = (target: HTMLTextAreaElement | null) => {
+    if (!target) return;
+    target.style.height = "auto";
+    target.style.height = `${target.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    resizeTextareaToFit(dosTextareaRef.current);
+    resizeTextareaToFit(dontsTextareaRef.current);
+  }, [selectedWeekEntry?.dos, selectedWeekEntry?.donts]);
   const dosDontsPanel = selectedWeekKey ? (
     <div className="grid gap-4 sm:grid-cols-2">
       <label
@@ -2054,19 +2067,18 @@ const goalStatusBadge = (status: KeyResultStatus) => {
           Do&apos;s
         </span>
         <textarea
+          ref={dosTextareaRef}
           value={selectedWeekEntry?.dos ?? ""}
           onChange={(event) => {
             updateWeeklyNoteEntry(selectedWeekKey, { dos: event.target.value });
-            event.target.style.height = "auto";
-            event.target.style.height = event.target.scrollHeight + "px";
+            resizeTextareaToFit(event.target);
           }}
           onInput={(event) => {
             const target = event.target as HTMLTextAreaElement;
-            target.style.height = "auto";
-            target.style.height = target.scrollHeight + "px";
+            resizeTextareaToFit(target);
           }}
           placeholder="Behaviors to reinforce"
-          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-sm text-[#0f172a] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)]"
+          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-[13px] text-[#0f172a] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm"
           style={{ height: "auto" }}
         />
       </label>
@@ -2078,19 +2090,18 @@ const goalStatusBadge = (status: KeyResultStatus) => {
           Don&apos;ts
         </span>
         <textarea
+          ref={dontsTextareaRef}
           value={selectedWeekEntry?.donts ?? ""}
           onChange={(event) => {
             updateWeeklyNoteEntry(selectedWeekKey, { donts: event.target.value });
-            event.target.style.height = "auto";
-            event.target.style.height = event.target.scrollHeight + "px";
+            resizeTextareaToFit(event.target);
           }}
           onInput={(event) => {
             const target = event.target as HTMLTextAreaElement;
-            target.style.height = "auto";
-            target.style.height = target.scrollHeight + "px";
+            resizeTextareaToFit(target);
           }}
           placeholder="Behaviors to avoid"
-          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-sm text-[#0f172a] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)]"
+          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-[13px] text-[#0f172a] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm"
           style={{ height: "auto" }}
         />
       </label>
@@ -2793,36 +2804,28 @@ const goalStatusBadge = (status: KeyResultStatus) => {
         </div>
       )}
 
-      <footer className="mt-24 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] px-6 md:px-24 py-6 text-sm">
-        <div className="flex flex-wrap items-center justify-between gap-8">
-          <div className="flex items-center gap-4 text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-            <Link href="/about" className="transition hover:text-foreground">
-              About
-            </Link>
-            <Link href="/terms" className="transition hover:text-foreground">
-              Terms
-            </Link>
-          </div>
-
-          <div className="flex flex-1 justify-center text-center">
+      <footer className="mt-24 bg-slate-900 text-white px-6 md:px-24 py-8 text-sm">
+        <div className="flex flex-col items-center gap-8 text-center">
+          <div className="order-2 flex flex-1 justify-center text-center">
             <div>
-              <p className="text-base font-medium text-foreground">© {new Date().getFullYear()} {APP_NAME}</p>
-              <p className="text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+              <p className="text-base font-medium text-white">© {new Date().getFullYear()} {APP_NAME}</p>
+              <p className="text-xs text-white/70">
                 Personal goal and productivity tracker
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="order-1 flex justify-center">
+            <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => {
                 setIsEditingProfile((prev) => !prev);
               }}
-              className={`flex h-10 w-10 items-center justify-center rounded-full border transition ${
+              className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/30 text-white transition ${
                 isProfileEditorVisible
-                  ? "border-[color-mix(in_srgb,var(--foreground)_40%,transparent)]"
-                  : "border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] hover:border-foreground"
+                  ? "border-white"
+                  : "hover:border-white"
               }`}
               aria-label="Toggle profile settings"
               aria-pressed={isProfileEditorVisible}
@@ -2832,13 +2835,23 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             <button
               type="button"
               onClick={toggleTheme}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] text-lg transition hover:border-foreground"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 text-lg text-white transition hover:border-white"
               aria-label="Toggle dark mode"
             >
               <span role="img" aria-hidden="true">
                 {theme === "light" ? "🌙" : "☀️"}
               </span>
             </button>
+            </div>
+          </div>
+
+          <div className="order-3 flex items-center justify-center gap-4 text-xs uppercase tracking-[0.3em] text-white/70">
+            <Link href="/about" className="transition hover:text-white">
+              About
+            </Link>
+            <Link href="/terms" className="transition hover:text-white">
+              Terms
+            </Link>
           </div>
         </div>
       </footer>

@@ -75,7 +75,7 @@ export const demoWeeklyNoteTemplate = {
     "<p><em>This is an example. When you log in, you can set separate goals for each week as well as separate Do's and Don'ts lists.</em></p><p><em>Use the calendar on the left side to rate your performance against these goals, either weekly or daily.</em></p>",
   dos: "Say hello to everyone\nStay present\nBe vulnerable\nStand up straight",
   donts:
-    "Don't avoid eye contact\nDon't be late\nDon't set expectations that you can't meet\nDon't eat sugar",
+    "Don't avoid eye contact\nDon't be late\nDon't set expectations you can't meet\nDon't eat sugar",
 };
 
 export const demoProfile = {
