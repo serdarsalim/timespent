@@ -2612,12 +2612,14 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                       {
                         menubar: false,
                         statusbar: false,
-                        height: 410,
+                        height: 430,
                         license_key: "gpl",
-                        plugins: "lists",
+                        plugins: "lists quickbars link",
                         skin: theme === "dark" ? "oxide-dark" : "oxide",
                         content_css: false,
                         toolbar: false,
+                        quickbars_selection_toolbar: "bold italic bullist numlist link",
+                        quickbars_insert_toolbar: false,
                         content_style: `
                           body {
                             background-color: #f1e9e5 !important;
@@ -2773,10 +2775,12 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                         statusbar: false,
                         height: 300,
                         license_key: "gpl",
-                        plugins: "lists",
+                        plugins: "lists quickbars link",
                         skin: theme === "dark" ? "oxide-dark" : "oxide",
                         content_css: false,
-                        toolbar: "bold bullist",
+                        toolbar: false,
+                        quickbars_selection_toolbar: "bold italic bullist numlist link",
+                        quickbars_insert_toolbar: false,
                         content_style: `
                           body {
                             background-color: transparent !important;
