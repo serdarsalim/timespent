@@ -235,6 +235,8 @@ type WeekMeta = {
   dayKeys: string[];
   primaryMonth: number;
   rangeLabel: string;
+  weekKey: string;
+  weekStart: Date;
 };
 
 const getWeekStart = (date: Date, weekStartDay: WeekdayIndex = 1) => {
@@ -244,6 +246,27 @@ const getWeekStart = (date: Date, weekStartDay: WeekdayIndex = 1) => {
   start.setDate(start.getDate() - diff);
   start.setHours(0, 0, 0, 0);
   return start;
+};
+
+const formatDayKey = (date: Date) =>
+  `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+
+const formatWeekKey = (weekStart: Date) => `week-${formatDayKey(weekStart)}`;
+
+const parseWeekKey = (key: string): Date | null => {
+  const match = /^week-(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(key);
+  if (!match) {
+    return null;
+  }
+  const [, yearStr, monthStr, dayStr] = match;
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return null;
+  }
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
 const formatISOWeekInputValue = (date: Date) => {
@@ -290,11 +313,11 @@ const formatRangeLabel = (start: Date, end: Date) => {
   return sameMonth ? `${startLabel}–${end.getDate()}` : `${startLabel} – ${endLabel}`;
 };
 
-const buildWeeksForYear = (year: number): WeekMeta[] => {
+const buildWeeksForYear = (year: number, weekStartDay: WeekdayIndex): WeekMeta[] => {
   const weeks: WeekMeta[] = [];
   const yearStart = new Date(year, 0, 1);
   const yearEnd = new Date(year, 11, 31);
-  let currentStart = getWeekStart(yearStart);
+  let currentStart = getWeekStart(yearStart, weekStartDay);
   let weekCounter = 1;
 
   while (currentStart <= yearEnd) {
@@ -336,6 +359,8 @@ const buildWeeksForYear = (year: number): WeekMeta[] => {
         dayKeys,
         primaryMonth: Number(primaryMonth),
         rangeLabel,
+        weekKey: formatWeekKey(weekStart),
+        weekStart: new Date(weekStart),
       });
       weekCounter += 1;
     }
@@ -346,6 +371,7 @@ const buildWeeksForYear = (year: number): WeekMeta[] => {
 
   return weeks;
 };
+
 
 export default function Home() {
   const [dateOfBirth, setDateOfBirth] = useState<string>("");
@@ -370,7 +396,11 @@ export default function Home() {
   const [productivityYear, setProductivityYear] = useState(() =>
     new Date().getFullYear()
   );
-  const weeksForYear = useMemo(() => buildWeeksForYear(productivityYear), [productivityYear]);
+  const [weekStartDay, setWeekStartDay] = useState<WeekdayIndex>(1);
+  const weeksForYear = useMemo(
+    () => buildWeeksForYear(productivityYear, weekStartDay),
+    [productivityYear, weekStartDay]
+  );
   const [isHydrated, setIsHydrated] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [productivityRatings, setProductivityRatings] = useState<
@@ -390,7 +420,6 @@ export default function Home() {
   const [scheduleEntries, setScheduleEntries] = useState<
     Record<string, ScheduleEntry[]>
   >({});
-  const [weekStartDay, setWeekStartDay] = useState<WeekdayIndex>(1);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [archivedGoals, setArchivedGoals] = useState<Goal[]>([]);
   const [isViewingArchived, setIsViewingArchived] = useState(false);
@@ -418,7 +447,7 @@ export default function Home() {
   const [activeGoalCardId, setActiveGoalCardId] = useState<string | null>(null);
   const okrCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, WeeklyNoteEntry>>({});
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const goalsSectionRef = useRef<HTMLDivElement | null>(null);
   const lastProcessedScheduleRef = useRef<string | null>(null);
@@ -719,20 +748,6 @@ export default function Home() {
             lastServerSavedScheduleRef.current = serializedSchedule;
             pendingScheduleRef.current = normalizedSchedule;
 
-            const productivityData = data.productivityRatings ?? {};
-            setProductivityRatings(productivityData);
-            const serializedProductivity = JSON.stringify(productivityData);
-            lastProcessedProductivityRef.current = serializedProductivity;
-            lastServerSavedProductivityRef.current = serializedProductivity;
-            pendingProductivityRef.current = productivityData;
-
-            const normalizedWeekly = normalizeWeeklyNotes(data.weeklyNotes);
-            setWeeklyNotes(normalizedWeekly);
-            const serializedWeekly = JSON.stringify(normalizedWeekly);
-            lastProcessedWeeklyNotesRef.current = serializedWeekly;
-            lastServerSavedWeeklyNotesRef.current = serializedWeekly;
-            pendingWeeklyNotesRef.current = normalizedWeekly;
-
             // Set profile data
             const profile = data.profile;
             let nextWeekStartDay: WeekdayIndex = 1;
@@ -773,6 +788,21 @@ export default function Home() {
               setWeekStartDay(1);
             }
 
+            const productivityData = data.productivityRatings ?? {};
+            setProductivityRatings(productivityData);
+            const serializedProductivity = JSON.stringify(productivityData);
+            lastProcessedProductivityRef.current = serializedProductivity;
+            lastServerSavedProductivityRef.current = serializedProductivity;
+            pendingProductivityRef.current = productivityData;
+
+            const weeklyNotesData = data.weeklyNotes ?? {};
+            const normalizedWeekly = normalizeWeeklyNotes(weeklyNotesData);
+            setWeeklyNotes(normalizedWeekly);
+            const serializedWeekly = JSON.stringify(normalizedWeekly);
+            lastProcessedWeeklyNotesRef.current = serializedWeekly;
+            lastServerSavedWeeklyNotesRef.current = serializedWeekly;
+            pendingWeeklyNotesRef.current = normalizedWeekly;
+
             const profilePayload = {
               personName: nextPersonName.trim() ? nextPersonName : null,
               dateOfBirth: nextDateOfBirth.trim() ? nextDateOfBirth : null,
@@ -795,7 +825,11 @@ export default function Home() {
           setGoals(demoGoals);
           setScheduleEntries(normalizeScheduleEntryColors(demoScheduleEntries));
           setProductivityRatings(demoProductivityRatings);
-          setWeeklyNotes(normalizeWeeklyNotes(buildDemoWeeklyNotes(new Date().getFullYear())));
+          setWeeklyNotes(
+            normalizeWeeklyNotes(
+              buildDemoWeeklyNotes(new Date().getFullYear(), demoProfile.weekStartDay as WeekdayIndex)
+            )
+          );
           setPersonName(demoProfile.personName);
           setDateOfBirth(demoProfile.dateOfBirth);
           setWeekStartDay(demoProfile.weekStartDay as WeekdayIndex);
@@ -1115,9 +1149,14 @@ export default function Home() {
     };
   }, [weeklyNotes, isHydrated, userEmail, isDemoMode, triggerWeeklyNotesSave]);
 
+  const selectedWeek = useMemo(
+    () => (selectedWeekKey ? weeksForYear.find((week) => week.weekKey === selectedWeekKey) : null),
+    [selectedWeekKey, weeksForYear]
+  );
+
   // Set current week as selected by default when viewing productivity tracker
   useEffect(() => {
-    if (view === "productivity" && selectedWeek === null) {
+    if (view === "productivity" && selectedWeekKey === null) {
       const today = new Date();
       const currentWeek = weeksForYear.find((week) =>
         week.dayKeys.some((dayKey) => {
@@ -1131,10 +1170,10 @@ export default function Home() {
         })
       );
       if (currentWeek) {
-        setSelectedWeek(currentWeek.weekNumber);
+        setSelectedWeekKey(currentWeek.weekKey);
       }
     }
-  }, [view, weeksForYear, selectedWeek]);
+  }, [view, weeksForYear, selectedWeekKey]);
 
   const isProfileComplete = Boolean(personName && dateOfBirth && email);
   const isProfileEditorVisible = isEditingProfile;
@@ -1157,10 +1196,7 @@ export default function Home() {
         })
       );
 
-    const activeWeek =
-      (selectedWeek !== null
-        ? weeksForYear.find((week) => week.weekNumber === selectedWeek)
-        : null) ?? findWeekForDate(new Date());
+    const activeWeek = selectedWeek ?? findWeekForDate(new Date());
 
     if (!activeWeek) {
       return "Select a week";
@@ -1181,13 +1217,15 @@ export default function Home() {
 
   const shiftSelectedWeek = (direction: -1 | 1) => {
     if (!weeksForYear.length) return;
-    let targetWeekNumber: number | null = selectedWeek;
-    if (targetWeekNumber === null) {
-      const currentWeek = weeksForYear.find((week) =>
+    let currentIndex = selectedWeekKey
+      ? weeksForYear.findIndex((week) => week.weekKey === selectedWeekKey)
+      : -1;
+    if (currentIndex === -1) {
+      const today = new Date();
+      currentIndex = weeksForYear.findIndex((week) =>
         week.dayKeys.some((dayKey) => {
           const [y, m, d] = dayKey.split("-").map(Number);
           const keyDate = new Date(y!, m! - 1, d);
-          const today = new Date();
           return (
             keyDate.getFullYear() === today.getFullYear() &&
             keyDate.getMonth() === today.getMonth() &&
@@ -1195,19 +1233,17 @@ export default function Home() {
           );
         })
       );
-      targetWeekNumber = currentWeek ? currentWeek.weekNumber : null;
     }
-    if (targetWeekNumber === null) {
-      targetWeekNumber = 1;
-    } else {
-      targetWeekNumber += direction;
-      if (targetWeekNumber < 1) {
-        targetWeekNumber = weeksForYear[weeksForYear.length - 1]!.weekNumber;
-      } else if (targetWeekNumber > weeksForYear[weeksForYear.length - 1]!.weekNumber) {
-        targetWeekNumber = weeksForYear[0]!.weekNumber;
-      }
+    if (currentIndex === -1) {
+      currentIndex = 0;
     }
-    setSelectedWeek(targetWeekNumber);
+    let targetIndex = currentIndex + direction;
+    if (targetIndex < 0) {
+      targetIndex = weeksForYear.length - 1;
+    } else if (targetIndex >= weeksForYear.length) {
+      targetIndex = 0;
+    }
+    setSelectedWeekKey(weeksForYear[targetIndex]!.weekKey);
   };
 
   const generateId = () =>
@@ -1778,17 +1814,17 @@ const goalStatusBadge = (status: KeyResultStatus) => {
     return productivityGoals[productivityYear] ?? "";
   }, [productivityGoals, productivityYear]);
 
-  const selectedWeekKey = selectedWeek !== null ? `week-${productivityYear}-${selectedWeek}` : null;
-
   // Get previous week's key for carryover logic
-  const getPreviousWeekKey = (year: number, week: number): string | null => {
-    if (week > 1) {
-      return `week-${year}-${week - 1}`;
-    } else if (year > 2000) {
-      // Get last week of previous year (approximate to 52, actual calculation would be more complex)
-      return `week-${year - 1}-52`;
+  const getPreviousWeekKey = (weekKey: string | null): string | null => {
+    if (!weekKey) {
+      return null;
     }
-    return null;
+    const parsed = parseWeekKey(weekKey);
+    if (!parsed) {
+      return null;
+    }
+    parsed.setDate(parsed.getDate() - 7);
+    return formatWeekKey(parsed);
   };
 
   const getWeekEntryWithCarryover = (weekKey: string | null): WeeklyNoteEntry | null => {
@@ -1802,8 +1838,8 @@ const goalStatusBadge = (status: KeyResultStatus) => {
     }
 
     // Current week is empty, try to carry over from previous week
-    if (selectedWeek !== null) {
-      const prevWeekKey = getPreviousWeekKey(productivityYear, selectedWeek);
+    if (selectedWeekKey) {
+      const prevWeekKey = getPreviousWeekKey(selectedWeekKey);
       if (prevWeekKey) {
         const prevEntry = weeklyNotes[prevWeekKey];
         if (prevEntry && (prevEntry.dos || prevEntry.donts)) {
@@ -2257,6 +2293,11 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 
   return (
     <div className="app-shell flex min-h-screen flex-col text-foreground transition-colors">
+      {!userEmail && isHydrated ? (
+        <div className="flex justify-end px-4 pt-4">
+          <UserInfo />
+        </div>
+      ) : null}
       <main className="flex flex-1 items-start justify-center px-4">
         <div className="w-full py-2 text-center">
           {view === "productivity" && (
@@ -2319,8 +2360,9 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                         });
                       }
                     }}
-                    selectedWeek={selectedWeek}
-                    setSelectedWeek={setSelectedWeek}
+                    selectedWeekKey={selectedWeekKey}
+                    setSelectedWeekKey={setSelectedWeekKey}
+                    weekStartDay={weekStartDay}
                   />
                   {productivityMode === "week" && dosDontsPanel ? (
                     <div className="mt-4 hidden lg:block">{dosDontsPanel}</div>
@@ -2342,9 +2384,9 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     Weekly goals
                   </span>
                   <TinyEditor
-                    key={selectedWeek !== null ? `week-notes-${productivityYear}-${selectedWeek}` : `productivity-goal-${productivityYear}`}
+                    key={selectedWeekKey ? `week-notes-${selectedWeekKey}` : `productivity-goal-${productivityYear}`}
                     tinymceScriptSrc={TINYMCE_CDN}
-                    value={selectedWeek !== null ? selectedWeekEntry?.content ?? "" : currentProductivityGoal}
+                    value={selectedWeekKey ? selectedWeekEntry?.content ?? "" : currentProductivityGoal}
                     init={
                       {
                         menubar: false,
@@ -2374,10 +2416,9 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                           }
                         `,
                         branding: false,
-                        placeholder:
-                          selectedWeek !== null
-                            ? "What are your goals this week, and did you accomplish them?"
-                            : "",
+                        placeholder: selectedWeekKey
+                          ? "What are your goals this week, and did you accomplish them?"
+                          : "",
                       } as Record<string, unknown>
                     }
                     onEditorChange={(content) =>
@@ -2553,8 +2594,9 @@ type ProductivityGridProps = {
   scale: ProductivityScaleEntry[];
   mode: "day" | "week";
   onToggleMode: () => void;
-  selectedWeek: number | null;
-  setSelectedWeek: React.Dispatch<React.SetStateAction<number | null>>;
+  selectedWeekKey: string | null;
+  setSelectedWeekKey: React.Dispatch<React.SetStateAction<string | null>>;
+  weekStartDay: WeekdayIndex;
 };
 
 const ProductivityGrid = ({
@@ -2565,8 +2607,9 @@ const ProductivityGrid = ({
   scale,
   mode,
   onToggleMode,
-  selectedWeek,
-  setSelectedWeek,
+  selectedWeekKey,
+  setSelectedWeekKey,
+  weekStartDay,
 }: ProductivityGridProps) => {
   const dayGridRef = useRef<HTMLDivElement | null>(null);
   const [hoveredDayDisplay, setHoveredDayDisplay] = useState<{
@@ -2576,7 +2619,7 @@ const ProductivityGrid = ({
   } | null>(null);
   const days = Array.from({ length: 31 }, (_, idx) => idx + 1);
   const months = Array.from({ length: 12 }, (_, idx) => idx);
-  const weeks = useMemo(() => buildWeeksForYear(year), [year]);
+  const weeks = useMemo(() => buildWeeksForYear(year, weekStartDay), [year, weekStartDay]);
   const weeksByMonth = useMemo(() => {
     const grouped = Array.from({ length: 12 }, () => [] as WeekMeta[]);
     weeks.forEach((week) => {
@@ -2684,8 +2727,8 @@ const ProductivityGrid = ({
       })
     );
     if (weekForDay) {
-      if (selectedWeek !== weekForDay.weekNumber) {
-        setSelectedWeek(weekForDay.weekNumber);
+      if (selectedWeekKey !== weekForDay.weekKey) {
+        setSelectedWeekKey(weekForDay.weekKey);
         return;
       }
     }
@@ -2705,10 +2748,10 @@ const ProductivityGrid = ({
     });
   };
 
-  const handleWeekCycle = (weekNumber: number, hasDayScores: boolean) => {
-    const key = `week-${year}-${weekNumber}`;
-    if (selectedWeek !== weekNumber) {
-      setSelectedWeek(weekNumber);
+  const handleWeekCycle = (weekKey: string, hasDayScores: boolean) => {
+    const key = weekKey;
+    if (selectedWeekKey !== weekKey) {
+      setSelectedWeekKey(weekKey);
       return;
     }
 
@@ -2887,7 +2930,7 @@ const ProductivityGrid = ({
 
                 weekBorderClass = `${borderTop} ${borderBottom} ${borderSides}`;
 
-                const isSelectedWeek = selectedWeek === currentWeek.weekNumber;
+                const isSelectedWeek = selectedWeekKey === currentWeek.weekKey;
                 if (isSelectedWeek) {
                   const isFirstDayOfWeek =
                     currentWeek.dayKeys[0] === `${year}-${monthIndex + 1}-${dayOfMonth}`;
@@ -3017,7 +3060,7 @@ const ProductivityGrid = ({
                       ).toFixed(1)
                     )
                   : null;
-                const manualWeekKey = `week-${year}-${week.weekNumber}`;
+                const manualWeekKey = week.weekKey;
                 const manualScoreRaw = ratings[manualWeekKey];
                 const manualScore =
                   manualScoreRaw !== null && manualScoreRaw !== undefined
@@ -3041,16 +3084,16 @@ const ProductivityGrid = ({
                   colorIndex !== null && colorIndex !== undefined
                     ? scale[colorIndex].color
                     : "bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)]";
-                const isSelectedWeek = selectedWeek === week.weekNumber;
+                const isSelectedWeek = selectedWeekKey === week.weekKey;
                 return (
                   <div key={`week-card-${week.weekNumber}`}>
                     <button
                       type="button"
-                      onClick={() => handleWeekCycle(week.weekNumber, hasDayScores)}
+                      onClick={() => handleWeekCycle(week.weekKey, hasDayScores)}
                       onKeyDown={(e) => {
                         if (!hasDayScores && (e.key === "Delete" || e.key === "Backspace")) {
                           e.preventDefault();
-                          const key = `week-${year}-${week.weekNumber}`;
+                          const key = week.weekKey;
                           setRatings((prev) => ({ ...prev, [key]: null }));
                         }
                       }}
@@ -4245,10 +4288,13 @@ const normalizeWeeklyNotes = (
   return normalized;
 };
 
-const buildDemoWeeklyNotes = (year: number): Record<string, Partial<WeeklyNoteEntry>> => {
+const buildDemoWeeklyNotes = (
+  year: number,
+  weekStartDay: WeekdayIndex
+): Record<string, Partial<WeeklyNoteEntry>> => {
   const notes: Record<string, Partial<WeeklyNoteEntry>> = {};
-  buildWeeksForYear(year).forEach((week) => {
-    notes[`week-${year}-${week.weekNumber}`] = demoWeeklyNoteTemplate;
+  buildWeeksForYear(year, weekStartDay).forEach((week) => {
+    notes[week.weekKey] = demoWeeklyNoteTemplate;
   });
   return notes;
 };
