@@ -887,7 +887,7 @@ export default function SharedPage({
             </div>
           </section>
           <section className="mx-auto mt-12 max-w-5xl text-left">
-            <h2 className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+            <h2 className="text-sm uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
               {data.profile.goalsSectionTitle || "Goals"}
             </h2>
             <div className="mt-4 grid gap-4">
@@ -899,9 +899,6 @@ export default function SharedPage({
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-base font-semibold text-foreground">{goal.title}</p>
-                      <p className="text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
-                        {goal.timeframe}
-                      </p>
                     </div>
                     {goal.archived ? (
                       <span className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
