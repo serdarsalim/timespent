@@ -11,6 +11,7 @@ import {
   saveSchedule,
   saveProductivity,
   saveWeeklyNotes,
+  saveDayOffs,
   saveProfile
 } from "@/lib/api";
 import { APP_NAME, legacyStorageKey, storageKey } from "@/lib/branding";
@@ -501,6 +502,9 @@ export default function Home() {
   const [weeklyGoalsTemplate, setWeeklyGoalsTemplate] = useState(
     "<p><strong>What I want to accomplish this week:</strong></p><ul><li>Monday</li><li>Tuesday</li><li>Wednesday</li><li>Thursday</li><li>Friday</li><li>Saturday</li><li>Sunday</li></ul>"
   );
+  const [dayOffAllowance, setDayOffAllowance] = useState(15);
+  const [dayOffs, setDayOffs] = useState<Record<string, boolean>>({});
+  const [isDayOffMode, setIsDayOffMode] = useState(false);
   const [shareEmail, setShareEmail] = useState("");
   const [shareError, setShareError] = useState<string | null>(null);
   const [isLoadingShares, setIsLoadingShares] = useState(false);
@@ -514,6 +518,17 @@ export default function Home() {
     () => (productivityScaleMode === "4" ? PRODUCTIVITY_SCALE_FOUR : PRODUCTIVITY_SCALE_THREE),
     [productivityScaleMode]
   );
+  const dayOffsUsed = useMemo(() => {
+    return Object.keys(dayOffs).reduce((count, key) => {
+      const [yearPart] = key.split("-");
+      const year = Number(yearPart);
+      if (Number.isFinite(year) && year === productivityYear) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+  }, [dayOffs, productivityYear]);
+  const dayOffsRemaining = Math.max(0, dayOffAllowance - dayOffsUsed);
   const [scheduleEntries, setScheduleEntries] = useState<
     Record<string, ScheduleEntry[]>
   >({});
@@ -570,6 +585,11 @@ export default function Home() {
   const weeklyNotesSaveTimeoutRef = useRef<number | null>(null);
   const isSavingWeeklyNotesRef = useRef(false);
   const lastServerSavedWeeklyNotesRef = useRef<string | null>(null);
+  const lastProcessedDayOffsRef = useRef<string | null>(null);
+  const pendingDayOffsRef = useRef<Record<string, boolean>>({});
+  const dayOffsSaveTimeoutRef = useRef<number | null>(null);
+  const isSavingDayOffsRef = useRef(false);
+  const lastServerSavedDayOffsRef = useRef<string | null>(null);
   const lastServerSavedProfileRef = useRef<string | null>(null);
   const hasLoadedServerDataRef = useRef(false);
 
@@ -763,6 +783,48 @@ export default function Home() {
     })();
   }, [userEmail, isDemoMode]);
 
+  const triggerDayOffsSave = useCallback(() => {
+    if (!userEmail || isDemoMode) {
+      return;
+    }
+
+    const pendingSerialized = JSON.stringify(pendingDayOffsRef.current ?? {});
+    if (lastServerSavedDayOffsRef.current === pendingSerialized) {
+      return;
+    }
+
+    if (isSavingDayOffsRef.current) {
+      return;
+    }
+
+    const dataToSave = pendingDayOffsRef.current;
+    const serializedToSave = pendingSerialized;
+
+    isSavingDayOffsRef.current = true;
+    void (async () => {
+      try {
+        await saveDayOffs(dataToSave);
+        lastServerSavedDayOffsRef.current = serializedToSave;
+      } catch (error) {
+        console.error("Failed to persist day offs", error);
+      } finally {
+        isSavingDayOffsRef.current = false;
+        const latestSerialized = JSON.stringify(pendingDayOffsRef.current ?? {});
+        if (
+          userEmail &&
+          !isDemoMode &&
+          latestSerialized !== serializedToSave &&
+          !dayOffsSaveTimeoutRef.current
+        ) {
+          dayOffsSaveTimeoutRef.current = window.setTimeout(() => {
+            dayOffsSaveTimeoutRef.current = null;
+            triggerDayOffsSave();
+          }, 200);
+        }
+      }
+    })();
+  }, [userEmail, isDemoMode]);
+
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
@@ -795,6 +857,13 @@ export default function Home() {
     if (weeklyNotesSaveTimeoutRef.current) {
       window.clearTimeout(weeklyNotesSaveTimeoutRef.current);
       weeklyNotesSaveTimeoutRef.current = null;
+    }
+    lastServerSavedDayOffsRef.current = null;
+    pendingDayOffsRef.current = {};
+    lastProcessedDayOffsRef.current = null;
+    if (dayOffsSaveTimeoutRef.current) {
+      window.clearTimeout(dayOffsSaveTimeoutRef.current);
+      dayOffsSaveTimeoutRef.current = null;
     }
     hasLoadedServerDataRef.current = false;
     lastServerSavedProfileRef.current = null;
@@ -890,6 +959,7 @@ export default function Home() {
             let nextProductivityScaleMode: "3" | "4" = productivityScaleMode;
             let nextShowLegend = showLegend;
             let nextWeeklyGoalsTemplate = weeklyGoalsTemplate;
+            let nextDayOffAllowance = dayOffAllowance;
 
             if (profile) {
               nextPersonName = profile.personName ?? "";
@@ -909,6 +979,10 @@ export default function Home() {
                 nextWeeklyGoalsTemplate = normalizeWeeklyGoalsTemplate(profile.weeklyGoalsTemplate);
                 setWeeklyGoalsTemplate(nextWeeklyGoalsTemplate);
                 hasProfileWeeklyTemplate = true;
+              }
+              if (profile.dayOffAllowance !== undefined && profile.dayOffAllowance !== null) {
+                nextDayOffAllowance = Number(profile.dayOffAllowance);
+                setDayOffAllowance(nextDayOffAllowance);
               }
               if (profile.recentYears) {
                 nextRecentYears = profile.recentYears;
@@ -957,6 +1031,13 @@ export default function Home() {
             lastServerSavedWeeklyNotesRef.current = migratedWeekly.didMigrate ? null : serializedWeekly;
             pendingWeeklyNotesRef.current = normalizedWeekly;
 
+            const dayOffsData = data.dayOffs ?? {};
+            setDayOffs(dayOffsData);
+            const serializedDayOffs = JSON.stringify(dayOffsData);
+            lastProcessedDayOffsRef.current = serializedDayOffs;
+            lastServerSavedDayOffsRef.current = serializedDayOffs;
+            pendingDayOffsRef.current = dayOffsData;
+
             if (migratedProductivity.didMigrate || migratedWeekly.didMigrate) {
               window.localStorage.setItem(migrationKey, "true");
             }
@@ -969,7 +1050,8 @@ export default function Home() {
               goalsSectionTitle: nextGoalsSectionTitle,
               productivityScaleMode: nextProductivityScaleMode,
               showLegend: nextShowLegend,
-              weeklyGoalsTemplate: nextWeeklyGoalsTemplate
+              weeklyGoalsTemplate: nextWeeklyGoalsTemplate,
+              dayOffAllowance: nextDayOffAllowance
             };
             lastServerSavedProfileRef.current = JSON.stringify(profilePayload);
           }
@@ -995,6 +1077,8 @@ export default function Home() {
           setWeekStartDay(demoProfile.weekStartDay as WeekdayIndex);
           setRecentYears(demoProfile.recentYears);
           setShowLegend(demoProfile.showLegend ?? true);
+          setDayOffAllowance(demoProfile.dayOffAllowance ?? 15);
+          setDayOffs({});
           setWeeklyGoalsTemplate(
             normalizeWeeklyGoalsTemplate(demoProfile.weeklyGoalsTemplate ?? weeklyGoalsTemplate)
           );
@@ -1038,6 +1122,20 @@ export default function Home() {
           const storedWeeklyTemplate = window.localStorage.getItem("timespent-weekly-goals-template");
           if (storedWeeklyTemplate) {
             setWeeklyGoalsTemplate(normalizeWeeklyGoalsTemplate(storedWeeklyTemplate));
+          }
+        }
+
+        if (!isLoggedIn) {
+          const storedDayOffs = window.localStorage.getItem("timespent-day-offs");
+          if (storedDayOffs) {
+            try {
+              const parsedDayOffs = JSON.parse(storedDayOffs) as Record<string, boolean>;
+              if (parsedDayOffs && typeof parsedDayOffs === "object") {
+                setDayOffs(parsedDayOffs);
+              }
+            } catch (error) {
+              console.error("Failed to parse cached day offs", error);
+            }
           }
         }
 
@@ -1104,7 +1202,8 @@ export default function Home() {
       goalsSectionTitle,
       productivityScaleMode,
       showLegend,
-      weeklyGoalsTemplate
+      weeklyGoalsTemplate,
+      dayOffAllowance
     };
     const serializedProfile = JSON.stringify(profilePayload);
     if (lastServerSavedProfileRef.current === serializedProfile) {
@@ -1119,7 +1218,7 @@ export default function Home() {
         console.error("Failed to save profile", error);
       }
     })();
-  }, [personName, dateOfBirth, email, weekStartDay, recentYears, goalsSectionTitle, productivityScaleMode, showLegend, weeklyGoalsTemplate, isHydrated, userEmail, isDemoMode]);
+  }, [personName, dateOfBirth, email, weekStartDay, recentYears, goalsSectionTitle, productivityScaleMode, showLegend, weeklyGoalsTemplate, dayOffAllowance, isHydrated, userEmail, isDemoMode]);
 
   useEffect(() => {
     try {
@@ -1169,6 +1268,47 @@ export default function Home() {
       }
     };
   }, [productivityRatings, isHydrated, userEmail, isDemoMode, triggerProductivitySave]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    const serialized = JSON.stringify(dayOffs);
+    if (lastProcessedDayOffsRef.current === serialized) {
+      return;
+    }
+    lastProcessedDayOffsRef.current = serialized;
+
+    if (!userEmail) {
+      try {
+        window.localStorage.setItem("timespent-day-offs", serialized);
+      } catch (error) {
+        console.error("Failed to cache day offs", error);
+      }
+      return;
+    }
+
+    if (!hasLoadedServerDataRef.current || isDemoMode) {
+      return;
+    }
+
+    pendingDayOffsRef.current = dayOffs;
+
+    if (dayOffsSaveTimeoutRef.current) {
+      window.clearTimeout(dayOffsSaveTimeoutRef.current);
+    }
+
+    dayOffsSaveTimeoutRef.current = window.setTimeout(() => {
+      dayOffsSaveTimeoutRef.current = null;
+      triggerDayOffsSave();
+    }, 600);
+
+    return () => {
+      if (dayOffsSaveTimeoutRef.current) {
+        window.clearTimeout(dayOffsSaveTimeoutRef.current);
+        dayOffsSaveTimeoutRef.current = null;
+      }
+    };
+  }, [dayOffs, isHydrated, userEmail, isDemoMode, triggerDayOffsSave]);
 
   useEffect(() => {
     try {
@@ -1463,10 +1603,17 @@ export default function Home() {
       currentIndex = 0;
     }
     let targetIndex = currentIndex + direction;
-    if (targetIndex < 0) {
-      targetIndex = weeksForYear.length - 1;
-    } else if (targetIndex >= weeksForYear.length) {
-      targetIndex = 0;
+    if (targetIndex < 0 || targetIndex >= weeksForYear.length) {
+      const nextYear = productivityYear + (direction === 1 ? 1 : -1);
+      const nextWeeks = buildWeeksForYear(nextYear, weekStartDay);
+      if (!nextWeeks.length) {
+        return;
+      }
+      setProductivityYear(nextYear);
+      setSelectedWeekKey(
+        direction === 1 ? nextWeeks[0]!.weekKey : nextWeeks[nextWeeks.length - 1]!.weekKey
+      );
+      return;
     }
     setSelectedWeekKey(weeksForYear[targetIndex]!.weekKey);
   };
@@ -2635,6 +2782,8 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     setYear={setProductivityYear}
                     ratings={productivityRatings}
                     setRatings={setProductivityRatings}
+                    dayOffs={dayOffs}
+                    setDayOffs={setDayOffs}
                     scale={productivityScale}
                     mode={productivityMode}
                     showLegend={showLegend}
@@ -2652,10 +2801,15 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                           productivityScaleMode,
                           showLegend,
                           weeklyGoalsTemplate,
+                          dayOffAllowance,
                           productivityViewMode: newMode,
                         });
                       }
                     }}
+                    dayOffMode={isDayOffMode}
+                    setDayOffMode={setIsDayOffMode}
+                    dayOffsRemaining={dayOffsRemaining}
+                    dayOffAllowance={dayOffAllowance}
                     selectedWeekKey={selectedWeekKey}
                     setSelectedWeekKey={setSelectedWeekKey}
                     weekStartDay={weekStartDay}
@@ -2829,6 +2983,26 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     checked={showLegend}
                     onChange={(event) => setShowLegend(event.target.checked)}
                     className="h-4 w-4 accent-foreground"
+                  />
+                </div>
+              </label>
+              <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                <div className="mt-1 flex items-center justify-between rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] px-4 py-2">
+                  <span className="text-sm normal-case tracking-normal text-foreground">
+                    Day off days per year
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={365}
+                    value={dayOffAllowance}
+                    onChange={(event) => {
+                      const nextValue = Number(event.target.value);
+                      if (Number.isFinite(nextValue)) {
+                        setDayOffAllowance(Math.max(0, Math.min(365, nextValue)));
+                      }
+                    }}
+                    className="w-20 rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-3 py-1 text-sm text-foreground outline-none focus:border-foreground"
                   />
                 </div>
               </label>
@@ -3113,10 +3287,16 @@ type ProductivityGridProps = {
   setYear: React.Dispatch<React.SetStateAction<number>>;
   ratings: Record<string, number | null>;
   setRatings: React.Dispatch<React.SetStateAction<Record<string, number | null>>>;
+  dayOffs: Record<string, boolean>;
+  setDayOffs: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   scale: ProductivityScaleEntry[];
   mode: "day" | "week";
   showLegend: boolean;
   onToggleMode: () => void;
+  dayOffMode: boolean;
+  setDayOffMode: React.Dispatch<React.SetStateAction<boolean>>;
+  dayOffsRemaining: number;
+  dayOffAllowance: number;
   selectedWeekKey: string | null;
   setSelectedWeekKey: React.Dispatch<React.SetStateAction<string | null>>;
   weekStartDay: WeekdayIndex;
@@ -3127,10 +3307,16 @@ const ProductivityGrid = ({
   setYear,
   ratings,
   setRatings,
+  dayOffs,
+  setDayOffs,
   scale,
   mode,
   showLegend,
   onToggleMode,
+  dayOffMode,
+  setDayOffMode,
+  dayOffsRemaining,
+  dayOffAllowance,
   selectedWeekKey,
   setSelectedWeekKey,
   weekStartDay,
@@ -3156,6 +3342,8 @@ const ProductivityGrid = ({
   }, [weeks]);
   const [isYearMenuOpen, setIsYearMenuOpen] = useState(false);
   const yearMenuRef = useRef<HTMLDivElement | null>(null);
+  const [isDayOffMenuOpen, setIsDayOffMenuOpen] = useState(false);
+  const dayOffMenuRef = useRef<HTMLDivElement | null>(null);
   const toggleLabel = mode === "week" ? "Week" : "Day";
   const toggleButton = (
     <button
@@ -3189,6 +3377,27 @@ const ProductivityGrid = ({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isYearMenuOpen]);
+
+  useEffect(() => {
+    if (!isDayOffMenuOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (!dayOffMenuRef.current) return;
+      if (event.target instanceof Node && !dayOffMenuRef.current.contains(event.target)) {
+        setIsDayOffMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsDayOffMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDayOffMenuOpen]);
 
   const yearControl = (
     <div ref={yearMenuRef} className="relative">
@@ -3238,6 +3447,58 @@ const ProductivityGrid = ({
       ) : null}
     </div>
   );
+  const dayOffControl = (
+    <div ref={dayOffMenuRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsDayOffMenuOpen((prev) => !prev)}
+        className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${
+          dayOffMode
+            ? "border-[#8dc8e6] text-[#3f6f88]"
+            : "border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] hover:border-foreground"
+        }`}
+        aria-label="Day off options"
+        aria-expanded={isDayOffMenuOpen}
+      >
+        Day Off
+        <svg
+          aria-hidden="true"
+          className={`h-3 w-3 transition ${isDayOffMenuOpen ? "rotate-180" : ""}`}
+          viewBox="0 0 20 20"
+          fill="none"
+        >
+          <path
+            d="M5 7l5 6 5-6"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {isDayOffMenuOpen ? (
+        <div className="absolute right-0 z-10 mt-2 w-56 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-background p-3 shadow-lg">
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+            <span>Days left</span>
+            <span className="text-[11px] font-semibold text-foreground">
+              {Math.max(0, dayOffsRemaining)} / {dayOffAllowance}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDayOffMode((prev) => !prev)}
+            className={`mt-3 w-full rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] transition ${
+              dayOffMode
+                ? "border-[#8dc8e6] bg-[#eef7fc] text-[#3f6f88]"
+                : "border-[color-mix(in_srgb,var(--foreground)_20%,transparent)] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] hover:border-foreground"
+            }`}
+          >
+            {dayOffMode ? "Stop selecting" : "Add/remove day off"}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
 
   const handleCycle = (monthIndex: number, day: number) => {
     const key = `${year}-${monthIndex + 1}-${day}`;
@@ -3255,6 +3516,24 @@ const ProductivityGrid = ({
         setSelectedWeekKey(weekForDay.weekKey);
         return;
       }
+    }
+
+    if (dayOffMode) {
+      setDayOffs((prev) => {
+        const next = { ...prev };
+        const hasRating = ratings[key] !== null && ratings[key] !== undefined;
+        if (next[key]) {
+          delete next[key];
+        } else if (!hasRating) {
+          next[key] = true;
+        }
+        return next;
+      });
+      return;
+    }
+
+    if (dayOffs[key]) {
+      return;
     }
 
     setRatings((prev) => {
@@ -3276,6 +3555,34 @@ const ProductivityGrid = ({
     const key = weekKey;
     if (selectedWeekKey !== weekKey) {
       setSelectedWeekKey(weekKey);
+      return;
+    }
+
+    if (dayOffMode) {
+      const targetWeek = weeks.find((week) => week.weekKey === weekKey);
+      if (!targetWeek) {
+        return;
+      }
+      setDayOffs((prev) => {
+        const next = { ...prev };
+        const eligibleKeys = targetWeek.dayKeys.filter(
+          (dayKey) => ratings[dayKey] === null || ratings[dayKey] === undefined
+        );
+        if (eligibleKeys.length === 0) {
+          return next;
+        }
+        const hasAll = eligibleKeys.every((dayKey) => next[dayKey]);
+        if (hasAll) {
+          eligibleKeys.forEach((dayKey) => {
+            delete next[dayKey];
+          });
+        } else {
+          eligibleKeys.forEach((dayKey) => {
+            next[dayKey] = true;
+          });
+        }
+        return next;
+      });
       return;
     }
 
@@ -3401,6 +3708,7 @@ const ProductivityGrid = ({
                 storedValue !== null && storedValue !== undefined;
               const currentValue = hasValue ? Math.min(storedValue!, scale.length - 1) : 0;
               const scaleEntry = scale[currentValue];
+              const isDayOff = Boolean(dayOffs[key]);
               const validDay =
                 dayOfMonth <= daysInMonth(year, monthIndex);
 
@@ -3490,9 +3798,11 @@ const ProductivityGrid = ({
                     }
                   }}
                   className={`h-4 w-full text-[10px] font-semibold text-transparent transition focus:text-transparent ${weekBorderClass} ${
-                    hasValue
-                      ? scaleEntry.color
-                      : "bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
+                    isDayOff
+                      ? "bg-[#8dc8e6]"
+                      : hasValue
+                        ? scaleEntry.color
+                        : "bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
                   } ${
                     isToday
                       ? "ring-2 ring-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)]"
@@ -3532,6 +3842,7 @@ const ProductivityGrid = ({
         <div className={`flex items-start gap-2 ${showLegend ? "flex-col sm:flex-row sm:items-center sm:gap-3" : "flex-row items-center"}`}>
           {yearControl}
           {toggleButton}
+          {dayOffControl}
         </div>
           </div>
         </div>
@@ -3611,6 +3922,15 @@ const ProductivityGrid = ({
                     ? scale[colorIndex].color
                     : "bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)]";
                 const isSelectedWeek = selectedWeekKey === week.weekKey;
+                const dayOffCount = week.dayKeys.reduce(
+                  (count, dayKey) => count + (dayOffs[dayKey] ? 1 : 0),
+                  0
+                );
+                const isFullWeekOff = dayOffCount === week.dayKeys.length;
+                const hasAnyDayOff = dayOffCount > 0;
+                const weekFillClass = isFullWeekOff ? "bg-[#8dc8e6]" : scaleClass;
+                const dayOffIndicatorClass =
+                  !isFullWeekOff && hasAnyDayOff ? "border-l-2 border-l-[#8dc8e6]" : "";
                 return (
                   <div key={`week-card-${week.weekNumber}`}>
                     <button
@@ -3627,7 +3947,7 @@ const ProductivityGrid = ({
                         hasDayScores
                           ? "cursor-pointer"
                           : "hover:opacity-90"
-                      } ${scaleClass} border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] ${
+                      } ${weekFillClass} border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] ${dayOffIndicatorClass} ${
                         isSelectedWeek ? "border-black" : ""
                       }`}
                       title={`${week.rangeLabel}${hasDayScores ? " (rating locked from daily view)" : ""}`}
@@ -3664,10 +3984,11 @@ const ProductivityGrid = ({
               </div>
             </div>
           )}
-          <div className={`flex items-start gap-2 ${showLegend ? "flex-col sm:flex-row sm:items-center sm:gap-3" : "flex-row items-center"}`}>
-            {yearControl}
-            {toggleButton}
-          </div>
+        <div className={`flex items-start gap-2 ${showLegend ? "flex-col sm:flex-row sm:items-center sm:gap-3" : "flex-row items-center"}`}>
+          {yearControl}
+          {toggleButton}
+          {dayOffControl}
+        </div>
         </div>
     </div>
   );

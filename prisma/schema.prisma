@@ -44,6 +44,7 @@ model User {
   accounts            Account[]
   goals               Goal[]
   productivityRatings ProductivityRating[]
+  dayOffs             DayOff[]
   scheduleEntries     ScheduleEntry[]
   sessions            Session[]
   profile             UserProfile?
@@ -74,6 +75,7 @@ model UserProfile {
   productivityScaleMode String   @default("3")
   showLegend            Boolean  @default(true)
   weeklyGoalsTemplate   String   @default("")
+  dayOffAllowance       Int      @default(15)
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -127,6 +129,18 @@ model ProductivityRating {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, key])
+}
+
+model DayOff {
+  id        String   @id @default(cuid())
+  userId    String
+  dayKey    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayKey])
+  @@index([userId, dayKey])
 }
 
 model WeeklyNote {

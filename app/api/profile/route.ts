@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
           productivityScaleMode: profile.productivityScaleMode || '3',
           showLegend: profile.showLegend ?? true,
           weeklyGoalsTemplate: profile.weeklyGoalsTemplate ?? '',
+          dayOffAllowance: profile.dayOffAllowance ?? 15,
         }
       })
     } else {
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
           productivityScaleMode: profile.productivityScaleMode || '3',
           showLegend: profile.showLegend ?? true,
           weeklyGoalsTemplate: profile.weeklyGoalsTemplate ?? '',
+          dayOffAllowance: profile.dayOffAllowance ?? 15,
         }
       })
     }

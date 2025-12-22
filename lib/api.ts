@@ -98,6 +98,24 @@ function transformProductivityToDB(obj: Record<string, number | null>): any[] {
   return Object.entries(obj).map(([key, rating]) => ({ key, rating }))
 }
 
+function transformDayOffsFromDB(entries: any[]): Record<string, boolean> {
+  const obj: Record<string, boolean> = {}
+  if (!Array.isArray(entries)) {
+    console.error('transformDayOffsFromDB: entries is not an array', entries)
+    return obj
+  }
+  for (const entry of entries) {
+    obj[entry.dayKey] = true
+  }
+  return obj
+}
+
+function transformDayOffsToDB(obj: Record<string, boolean>): any[] {
+  return Object.entries(obj)
+    .filter(([, value]) => value)
+    .map(([dayKey]) => ({ dayKey }))
+}
+
 // Transform weekly notes from array to object
 type WeeklyNotePayload = {
   content: string
@@ -137,11 +155,13 @@ export async function loadAllData() {
       goalsRes,
       productivityRes,
       weeklyNotesRes,
+      dayOffsRes,
       profileRes
     ] = await Promise.all([
       fetch('/api/goals'),
       fetch('/api/productivity'),
       fetch('/api/weekly-notes'),
+      fetch('/api/day-offs'),
       fetch('/api/profile')
     ])
 
@@ -149,11 +169,13 @@ export async function loadAllData() {
       { goals },
       { productivityRatings },
       { weeklyNotes },
+      { dayOffs },
       { profile }
     ] = await Promise.all([
       goalsRes.json(),
       productivityRes.json(),
       weeklyNotesRes.json(),
+      dayOffsRes.json(),
       profileRes.json()
     ])
 
@@ -162,6 +184,7 @@ export async function loadAllData() {
       scheduleEntries: {},
       productivityRatings: transformProductivityFromDB(productivityRatings || []),
       weeklyNotes: transformWeeklyNotesFromDB(weeklyNotes || []),
+      dayOffs: transformDayOffsFromDB(dayOffs || []),
       profile: profile || null
     }
   } catch (error) {
@@ -268,6 +291,38 @@ export async function saveWeeklyNotes(weeklyNotes: Record<string, WeeklyNotePayl
     return transformWeeklyNotesFromDB(data.weeklyNotes)
   } catch (error) {
     console.error('Error saving weekly notes:', error)
+    return null
+  }
+}
+
+export async function saveDayOffs(dayOffs: Record<string, boolean>) {
+  try {
+    const array = transformDayOffsToDB(dayOffs)
+    const response = await fetch('/api/day-offs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dayOffs: array })
+    })
+
+    if (response.status === 401) {
+      return null
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      console.error('Error saving day offs:', response.status, response.statusText, errorData)
+      return null
+    }
+
+    const data = await response.json().catch(() => null)
+    if (!data || !Array.isArray(data.dayOffs)) {
+      console.error('Invalid day offs response payload', data)
+      return null
+    }
+
+    return transformDayOffsFromDB(data.dayOffs)
+  } catch (error) {
+    console.error('Error saving day offs:', error)
     return null
   }
 }

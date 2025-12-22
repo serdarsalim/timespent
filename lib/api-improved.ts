@@ -76,6 +76,21 @@ function transformProductivityToDB(obj: Record<string, number | null>): any[] {
   return Object.entries(obj).map(([key, rating]) => ({ key, rating }))
 }
 
+function transformDayOffsFromDB(entries: any[]): Record<string, boolean> {
+  const obj: Record<string, boolean> = {}
+  if (!Array.isArray(entries)) return obj
+  for (const entry of entries) {
+    obj[entry.dayKey] = true
+  }
+  return obj
+}
+
+function transformDayOffsToDB(obj: Record<string, boolean>): any[] {
+  return Object.entries(obj)
+    .filter(([, value]) => value)
+    .map(([dayKey]) => ({ dayKey }))
+}
+
 type WeeklyNotePayload = {
   content: string
   dos?: string
@@ -107,11 +122,12 @@ function transformWeeklyNotesToDB(obj: Record<string, WeeklyNotePayload>): any[]
 // API functions
 export async function loadAllData() {
   try {
-    const [goalsRes, productivityRes, weeklyNotesRes, profileRes] =
+    const [goalsRes, productivityRes, weeklyNotesRes, dayOffsRes, profileRes] =
       await Promise.all([
         apiGet('/api/goals'),
         apiGet('/api/productivity'),
         apiGet('/api/weekly-notes'),
+        apiGet('/api/day-offs'),
         apiGet('/api/profile')
       ])
 
@@ -120,6 +136,7 @@ export async function loadAllData() {
       scheduleEntries: {},
       productivityRatings: productivityRes.success && productivityRes.data ? transformProductivityFromDB((productivityRes.data as any).productivityRatings || []) : {},
       weeklyNotes: weeklyNotesRes.success && weeklyNotesRes.data ? transformWeeklyNotesFromDB((weeklyNotesRes.data as any).weeklyNotes || []) : {},
+      dayOffs: dayOffsRes.success && dayOffsRes.data ? transformDayOffsFromDB((dayOffsRes.data as any).dayOffs || []) : {},
       profile: profileRes.success && profileRes.data ? (profileRes.data as any).profile || null : null
     }
   } catch (error) {
@@ -163,6 +180,15 @@ export async function saveWeeklyNotes(weeklyNotes: Record<string, WeeklyNotePayl
     throw new Error(response.error || 'Failed to save weekly notes')
   }
   return transformWeeklyNotesFromDB((response.data as any)?.weeklyNotes || [])
+}
+
+export async function saveDayOffs(dayOffs: Record<string, boolean>) {
+  const array = transformDayOffsToDB(dayOffs)
+  const response = await apiPost('/api/day-offs', { dayOffs: array })
+  if (!response.success) {
+    throw new Error(response.error || 'Failed to save day offs')
+  }
+  return transformDayOffsFromDB((response.data as any)?.dayOffs || [])
 }
 
 export async function saveProfile(profile: Profile) {
