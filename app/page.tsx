@@ -2684,7 +2684,10 @@ const ProductivityGrid = ({
       })
     );
     if (weekForDay) {
-      setSelectedWeek(weekForDay.weekNumber);
+      if (selectedWeek !== weekForDay.weekNumber) {
+        setSelectedWeek(weekForDay.weekNumber);
+        return;
+      }
     }
 
     setRatings((prev) => {
@@ -2704,7 +2707,10 @@ const ProductivityGrid = ({
 
   const handleWeekCycle = (weekNumber: number, hasDayScores: boolean) => {
     const key = `week-${year}-${weekNumber}`;
-    setSelectedWeek(weekNumber);
+    if (selectedWeek !== weekNumber) {
+      setSelectedWeek(weekNumber);
+      return;
+    }
 
     // Only cycle rating if there are no day scores
     if (!hasDayScores) {
