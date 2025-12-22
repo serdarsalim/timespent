@@ -48,6 +48,8 @@ model User {
   sessions            Session[]
   profile             UserProfile?
   weeklyNotes         WeeklyNote[]
+  sharesSent          Share[]              @relation("SharesSent")
+  sharesReceived      Share[]              @relation("SharesReceived")
 }
 
 model VerificationToken {
@@ -139,4 +141,18 @@ model WeeklyNote {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, weekKey])
+}
+
+model Share {
+  id               String   @id @default(cuid())
+  ownerId          String
+  owner            User     @relation("SharesSent", fields: [ownerId], references: [id], onDelete: Cascade)
+  recipientEmail   String
+  recipientUserId  String?
+  recipientUser    User?    @relation("SharesReceived", fields: [recipientUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now())
+  revokedAt        DateTime?
+
+  @@unique([ownerId, recipientEmail])
+  @@index([recipientEmail])
 }

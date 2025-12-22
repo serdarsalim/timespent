@@ -43,6 +43,13 @@ type ScheduleEntry = {
   skipDates?: string[];
 };
 
+type ShareListItem = {
+  id: string;
+  recipientEmail?: string;
+  owner?: { email?: string | null; profile?: { personName?: string | null } | null };
+  recipientUser?: { email?: string | null };
+};
+
 type WeekdayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 const WEEK_START_OPTIONS: { value: WeekdayIndex; label: string }[] = [
@@ -458,6 +465,7 @@ export default function Home() {
   const [personName, setPersonName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isShareEditorVisible, setIsShareEditorVisible] = useState(false);
   const [theme, setTheme] = useState<Theme>("light");
   const [recentYears, setRecentYears] = useState<string>("10");
   const [view, setView] = useState<ViewMode>(() => {
@@ -493,6 +501,11 @@ export default function Home() {
   const [weeklyGoalsTemplate, setWeeklyGoalsTemplate] = useState(
     "<p><strong>What I want to accomplish this week:</strong></p><ul><li>Monday</li><li>Tuesday</li><li>Wednesday</li><li>Thursday</li><li>Friday</li><li>Saturday</li><li>Sunday</li></ul>"
   );
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [isLoadingShares, setIsLoadingShares] = useState(false);
+  const [sharedWithMe, setSharedWithMe] = useState<ShareListItem[]>([]);
+  const [sharedByMe, setSharedByMe] = useState<ShareListItem[]>([]);
   const [productivityMode, setProductivityMode] =
     useState<"day" | "week">("week");
   const [productivityScaleMode, setProductivityScaleMode] =
@@ -786,6 +799,33 @@ export default function Home() {
     hasLoadedServerDataRef.current = false;
     lastServerSavedProfileRef.current = null;
   }, [userEmail]);
+
+  const fetchShares = useCallback(async () => {
+    if (!userEmail) {
+      return;
+    }
+    setIsLoadingShares(true);
+    setShareError(null);
+    try {
+      const response = await fetch("/api/shares");
+      if (!response.ok) {
+        throw new Error("Failed to load shares");
+      }
+      const data = await response.json();
+      setSharedWithMe(data.sharedWithMe ?? []);
+      setSharedByMe(data.sharedByMe ?? []);
+    } catch (error) {
+      setShareError("Unable to load shares right now.");
+    } finally {
+      setIsLoadingShares(false);
+    }
+  }, [userEmail]);
+
+  useEffect(() => {
+    if (isEditingProfile || isShareEditorVisible) {
+      void fetchShares();
+    }
+  }, [isEditingProfile, isShareEditorVisible, fetchShares]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -1429,6 +1469,56 @@ export default function Home() {
       targetIndex = 0;
     }
     setSelectedWeekKey(weeksForYear[targetIndex]!.weekKey);
+  };
+
+  const handleCreateShare = async () => {
+    const trimmedEmail = shareEmail.trim();
+    if (!trimmedEmail) {
+      setShareError("Enter an email to share.");
+      return;
+    }
+    setShareError(null);
+    const optimisticId = `temp-${Date.now()}`;
+    const optimisticShare: ShareListItem = {
+      id: optimisticId,
+      recipientEmail: trimmedEmail,
+    };
+    setSharedByMe((prev) => [optimisticShare, ...prev]);
+    setShareEmail("");
+    try {
+      const response = await fetch("/api/shares", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientEmail: trimmedEmail }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setShareError(data.error || "Unable to share right now.");
+        setSharedByMe((prev) => prev.filter((share) => share.id !== optimisticId));
+        return;
+      }
+      await fetchShares();
+    } catch (error) {
+      setShareError("Unable to share right now.");
+      setSharedByMe((prev) => prev.filter((share) => share.id !== optimisticId));
+    }
+  };
+
+  const handleRevokeShare = async (shareId: string) => {
+    const previousShares = sharedByMe;
+    setSharedByMe((prev) => prev.filter((share) => share.id !== shareId));
+    try {
+      const response = await fetch(`/api/shares/${shareId}`, { method: "DELETE" });
+      if (!response.ok) {
+        setShareError("Unable to revoke share.");
+        setSharedByMe(previousShares);
+        return;
+      }
+      await fetchShares();
+    } catch (error) {
+      setShareError("Unable to revoke share.");
+      setSharedByMe(previousShares);
+    }
   };
 
   const generateId = () =>
@@ -2808,6 +2898,116 @@ const goalStatusBadge = (status: KeyResultStatus) => {
         </div>
       )}
 
+      {isShareEditorVisible && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-4 overflow-y-auto"
+          onClick={() => setIsShareEditorVisible(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-2xl rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] bg-background p-6 text-left shadow-2xl my-8 max-h-[90vh] overflow-y-auto"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                  Sharing
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareEditorVisible(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]"
+              >
+                ✕
+              </button>
+            </div>
+            {!userEmail ? (
+              <p className="text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+                Sign in to share your goals and view shared pages.
+              </p>
+            ) : (
+              <div className="grid gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="email"
+                    value={shareEmail}
+                    onChange={(event) => setShareEmail(event.target.value)}
+                    placeholder="Email address"
+                    className="flex-1 min-w-[220px] rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent px-4 py-2 text-sm normal-case tracking-normal text-foreground outline-none focus:border-foreground"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateShare}
+                    className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] px-4 py-2 text-xs uppercase tracking-[0.2em] text-foreground transition hover:border-foreground"
+                  >
+                    Share
+                  </button>
+                </div>
+                {shareError && (
+                  <p className="text-xs normal-case tracking-normal text-[#f87171]">
+                    {shareError}
+                  </p>
+                )}
+                {isLoadingShares && (
+                  <p className="text-xs normal-case tracking-normal text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+                    Loading shares...
+                  </p>
+                )}
+                {sharedByMe.length > 0 && (
+                  <div className="space-y-2 text-xs normal-case tracking-normal text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+                    <span className="block text-[11px] uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                      Sharing with
+                    </span>
+                    {sharedByMe.map((share) => (
+                      <div key={share.id} className="flex flex-wrap items-center gap-2">
+                        <span>{share.recipientUser?.email || share.recipientEmail}</span>
+                        <Link
+                          href={`/shared/${share.id}`}
+                          className="text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] transition hover:text-foreground"
+                        >
+                          Open
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeShare(share.id)}
+                          className="text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] transition hover:text-foreground"
+                        >
+                          Revoke
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {sharedWithMe.length > 0 && (
+                  <div className="space-y-2 text-xs normal-case tracking-normal text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+                    <span className="block text-[11px] uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                      Shared with me
+                    </span>
+                    {sharedWithMe.map((share) => (
+                      <div key={share.id} className="flex flex-wrap items-center gap-2">
+                        <span>
+                          {share.owner?.profile?.personName ||
+                            share.owner?.email ||
+                            "Shared account"}
+                        </span>
+                        <Link
+                          href={`/shared/${share.id}`}
+                          className="text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] transition hover:text-foreground"
+                        >
+                          Open
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <footer className="mt-24 bg-slate-900 text-white px-6 md:px-24 py-8 text-sm">
         <div className="flex flex-col items-center gap-8 text-center">
           <div className="order-2 flex flex-1 justify-center text-center">
@@ -2821,6 +3021,21 @@ const goalStatusBadge = (status: KeyResultStatus) => {
 
           <div className="order-1 flex justify-center">
             <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsShareEditorVisible((prev) => !prev);
+              }}
+              className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/30 text-white transition ${
+                isShareEditorVisible
+                  ? "border-white"
+                  : "hover:border-white"
+              }`}
+              aria-label="Open sharing"
+              aria-pressed={isShareEditorVisible}
+            >
+              🔗
+            </button>
             <button
               type="button"
               onClick={() => {
