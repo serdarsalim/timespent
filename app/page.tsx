@@ -2583,7 +2583,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   <div className="mb-4 lg:hidden">{dosDontsPanel}</div>
                 ) : null}
                 <div
-                  className="flex-1 rounded-2xl p-4"
+                  className="flex-1 rounded-2xl px-4 pt-4 pb-4"
                   style={{ backgroundColor: "var(--card-muted-bg)" }}
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
@@ -2612,7 +2612,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                       {
                         menubar: false,
                         statusbar: false,
-                        height: 388,
+                        height: 410,
                         license_key: "gpl",
                         plugins: "lists",
                         skin: theme === "dark" ? "oxide-dark" : "oxide",
