@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
           productivityViewMode: profile.productivityViewMode || 'day',
           productivityScaleMode: profile.productivityScaleMode || '3',
           showLegend: profile.showLegend ?? true,
+          weeklyGoalsTemplate: profile.weeklyGoalsTemplate ?? '',
         }
       })
     } else {
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
           productivityViewMode: profile.productivityViewMode || 'day',
           productivityScaleMode: profile.productivityScaleMode || '3',
           showLegend: profile.showLegend ?? true,
+          weeklyGoalsTemplate: profile.weeklyGoalsTemplate ?? '',
         }
       })
     }

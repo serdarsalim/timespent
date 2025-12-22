@@ -71,6 +71,7 @@ model UserProfile {
   productivityViewMode  String   @default("day")
   productivityScaleMode String   @default("3")
   showLegend            Boolean  @default(true)
+  weeklyGoalsTemplate   String   @default("")
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 

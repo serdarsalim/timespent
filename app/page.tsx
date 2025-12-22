@@ -284,6 +284,26 @@ const parseWeekKey = (key: string): { weekStart: Date; weekStartDay: WeekdayInde
 const isLegacyWeekKey = (key: string) =>
   /^week-(\d{4})-(\d{1,2})-(\d{1,2})$/.test(key);
 
+const normalizeWeeklyGoalsTemplate = (template: string) => {
+  if (/<[^>]+>/.test(template)) {
+    return template;
+  }
+  const normalized = template
+    .replace(/^\s*What I want to accomplish this week:\s*/i, "")
+    .replace(/\s*-\s*/g, "\n- ")
+    .trim();
+  const heading = "What I want to accomplish this week:";
+  const lines = normalized ? normalized.split(/\r?\n/) : [];
+  const listItems = lines
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => `<li>${line.slice(2).trim()}</li>`)
+    .join("");
+  const listBlock = listItems ? `<ul>${listItems}</ul>` : "";
+  return `<p><strong>${heading}</strong></p>${listBlock}`;
+};
+
+
 const remapWeekKeys = <T,>(
   entries: Record<string, T>,
   nextWeekStartDay: WeekdayIndex
@@ -470,6 +490,9 @@ export default function Home() {
     Record<number, string>
   >({});
   const [showLegend, setShowLegend] = useState(true);
+  const [weeklyGoalsTemplate, setWeeklyGoalsTemplate] = useState(
+    "<p><strong>What I want to accomplish this week:</strong></p><ul><li>Monday</li><li>Tuesday</li><li>Wednesday</li><li>Thursday</li><li>Friday</li><li>Saturday</li><li>Sunday</li></ul>"
+  );
   const [productivityMode, setProductivityMode] =
     useState<"day" | "week">("week");
   const [productivityScaleMode, setProductivityScaleMode] =
@@ -767,10 +790,14 @@ export default function Home() {
     async function loadData() {
       let shouldOpenProfileModal: boolean | null = null;
       let hasProfileLegend = false;
+      let hasProfileWeeklyTemplate = false;
       try {
         // Check session first
         const sessionRes = await fetch("/api/auth/session");
-        const session = await sessionRes.json();
+        const sessionContentType = sessionRes.headers.get("content-type") || "";
+        const session = sessionContentType.includes("application/json")
+          ? await sessionRes.json()
+          : null;
 
         const isLoggedIn = !!session?.user?.email;
         setUserEmail(session?.user?.email || null);
@@ -820,6 +847,7 @@ export default function Home() {
             let nextDateOfBirth = "";
             let nextProductivityScaleMode: "3" | "4" = productivityScaleMode;
             let nextShowLegend = showLegend;
+            let nextWeeklyGoalsTemplate = weeklyGoalsTemplate;
 
             if (profile) {
               nextPersonName = profile.personName ?? "";
@@ -834,6 +862,11 @@ export default function Home() {
                 nextShowLegend = Boolean(profile.showLegend);
                 setShowLegend(nextShowLegend);
                 hasProfileLegend = true;
+              }
+              if (profile.weeklyGoalsTemplate) {
+                nextWeeklyGoalsTemplate = normalizeWeeklyGoalsTemplate(profile.weeklyGoalsTemplate);
+                setWeeklyGoalsTemplate(nextWeeklyGoalsTemplate);
+                hasProfileWeeklyTemplate = true;
               }
               if (profile.recentYears) {
                 nextRecentYears = profile.recentYears;
@@ -893,7 +926,8 @@ export default function Home() {
               recentYears: nextRecentYears,
               goalsSectionTitle: nextGoalsSectionTitle,
               productivityScaleMode: nextProductivityScaleMode,
-              showLegend: nextShowLegend
+              showLegend: nextShowLegend,
+              weeklyGoalsTemplate: nextWeeklyGoalsTemplate
             };
             lastServerSavedProfileRef.current = JSON.stringify(profilePayload);
           }
@@ -919,6 +953,9 @@ export default function Home() {
           setWeekStartDay(demoProfile.weekStartDay as WeekdayIndex);
           setRecentYears(demoProfile.recentYears);
           setShowLegend(demoProfile.showLegend ?? true);
+          setWeeklyGoalsTemplate(
+            normalizeWeeklyGoalsTemplate(demoProfile.weeklyGoalsTemplate ?? weeklyGoalsTemplate)
+          );
           setView("productivity");
         }
 
@@ -952,6 +989,13 @@ export default function Home() {
             if (storedLegendHidden === "true") {
               setShowLegend(false);
             }
+          }
+        }
+
+        if (!isLoggedIn || !hasProfileWeeklyTemplate) {
+          const storedWeeklyTemplate = window.localStorage.getItem("timespent-weekly-goals-template");
+          if (storedWeeklyTemplate) {
+            setWeeklyGoalsTemplate(normalizeWeeklyGoalsTemplate(storedWeeklyTemplate));
           }
         }
 
@@ -1017,7 +1061,8 @@ export default function Home() {
       recentYears,
       goalsSectionTitle,
       productivityScaleMode,
-      showLegend
+      showLegend,
+      weeklyGoalsTemplate
     };
     const serializedProfile = JSON.stringify(profilePayload);
     if (lastServerSavedProfileRef.current === serializedProfile) {
@@ -1032,7 +1077,7 @@ export default function Home() {
         console.error("Failed to save profile", error);
       }
     })();
-  }, [personName, dateOfBirth, email, weekStartDay, recentYears, goalsSectionTitle, productivityScaleMode, showLegend, isHydrated, userEmail, isDemoMode]);
+  }, [personName, dateOfBirth, email, weekStartDay, recentYears, goalsSectionTitle, productivityScaleMode, showLegend, weeklyGoalsTemplate, isHydrated, userEmail, isDemoMode]);
 
   useEffect(() => {
     try {
@@ -1102,6 +1147,15 @@ export default function Home() {
       console.error("Failed to cache legend preference", error);
     }
   }, [showLegend, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      window.localStorage.setItem("timespent-weekly-goals-template", weeklyGoalsTemplate);
+    } catch (error) {
+      console.error("Failed to cache weekly goals template", error);
+    }
+  }, [weeklyGoalsTemplate, isHydrated]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -1986,6 +2040,10 @@ const goalStatusBadge = (status: KeyResultStatus) => {
   };
 
   const selectedWeekEntry = getWeekEntryWithCarryover(selectedWeekKey);
+  const selectedWeekContentText =
+    selectedWeekEntry?.content?.replace(/<[^>]*>/g, "").trim() ?? "";
+  const templateContentText = weeklyGoalsTemplate.replace(/<[^>]*>/g, "").trim();
+  const isWeeklyGoalsEmpty = selectedWeekKey ? selectedWeekContentText.length === 0 : true;
   const dosDontsPanel = selectedWeekKey ? (
     <div className="grid gap-4 sm:grid-cols-2">
       <label
@@ -2376,7 +2434,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
           </>
         ) : (
           <div className="w-full max-w-3xl okr-card p-6">
-            <div className="grid gap-4">
+            <div className="grid gap-4 lg:grid-cols-2">
               <input
                 type="text"
                 value={newGoalTitle}
@@ -2492,6 +2550,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                           goalsSectionTitle,
                           productivityScaleMode,
                           showLegend,
+                          weeklyGoalsTemplate,
                           productivityViewMode: newMode,
                         });
                       }
@@ -2516,9 +2575,24 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   className="flex-1 rounded-2xl p-4"
                   style={{ backgroundColor: "var(--card-muted-bg)" }}
                 >
-                  <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-                    Weekly goals
-                  </span>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <span className="block text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                      Weekly goals
+                    </span>
+                    {selectedWeekKey && isWeeklyGoalsEmpty && templateContentText ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateWeeklyNoteEntry(selectedWeekKey, {
+                            content: weeklyGoalsTemplate,
+                          })
+                        }
+                        className="text-[10px] uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] transition hover:text-foreground"
+                      >
+                        Use template
+                      </button>
+                    ) : null}
+                  </div>
                   <TinyEditor
                     key={selectedWeekKey ? `week-notes-${selectedWeekKey}` : `productivity-goal-${productivityYear}`}
                     tinymceScriptSrc={TINYMCE_CDN}
@@ -2612,12 +2686,12 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 ✕
               </button>
             </div>
-            {userEmail && (
-              <div className="mb-4 rounded-2xl bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] p-4">
-                <UserInfo showLabel />
-              </div>
-            )}
-            <div className="grid gap-4">
+            <div className="grid gap-4 lg:grid-cols-2">
+              {userEmail && (
+                <div className="rounded-2xl bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] p-4">
+                  <UserInfo showLabel />
+                </div>
+              )}
               <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
                 Full name
                 <input
@@ -2658,7 +2732,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   />
                 </div>
               </label>
-              <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+              <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] lg:col-span-2">
                 Week starts on
                 <div className="mt-1 flex items-center gap-2">
                   {[0, 1].map((day) => (
@@ -2675,6 +2749,44 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                       {day === 0 ? "Sunday" : "Monday"}
                     </button>
                   ))}
+                </div>
+              </label>
+              <label className="flex flex-col text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] lg:col-span-2">
+                Weekly goals template
+                <div className="mt-2 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-transparent p-2">
+                  <TinyEditor
+                    tinymceScriptSrc={TINYMCE_CDN}
+                    value={weeklyGoalsTemplate}
+                    init={
+                      {
+                        menubar: false,
+                        statusbar: false,
+                        height: 300,
+                        license_key: "gpl",
+                        plugins: "lists",
+                        skin: theme === "dark" ? "oxide-dark" : "oxide",
+                        content_css: false,
+                        toolbar: "bold bullist",
+                        content_style: `
+                          body {
+                            background-color: transparent !important;
+                            color: #0f172a !important;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                            font-size: 15px;
+                            padding: 8px;
+                            margin: 0;
+                          }
+                          * {
+                            background-color: transparent !important;
+                          }
+                        `,
+                        branding: false,
+                      } as Record<string, unknown>
+                    }
+                    onEditorChange={(content) =>
+                      setWeeklyGoalsTemplate(normalizeWeeklyGoalsTemplate(content))
+                    }
+                  />
                 </div>
               </label>
             </div>

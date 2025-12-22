@@ -20,7 +20,13 @@ export function UserInfo({ showLabel = false }: UserInfoProps) {
 
   useEffect(() => {
     fetch("/api/auth/session")
-      .then((res) => res.json())
+      .then(async (res) => {
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error("Non-JSON session response");
+        }
+        return res.json();
+      })
       .then((data) => {
         setSession(data);
         setLoading(false);
@@ -80,10 +86,10 @@ export function UserInfo({ showLabel = false }: UserInfoProps) {
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm">
       <span className="text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-        Logged in as
-      </span>
-      <span className="text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]">
-        {session.user.email}
+        Logged in as{" "}
+        <span className="normal-case tracking-normal text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]">
+          {session.user.email}
+        </span>
       </span>
       <a
         href="/api/auth/signout"
