@@ -2491,6 +2491,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                           recentYears,
                           goalsSectionTitle,
                           productivityScaleMode,
+                          showLegend,
                           productivityViewMode: newMode,
                         });
                       }
