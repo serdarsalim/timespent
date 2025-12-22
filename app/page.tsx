@@ -2397,26 +2397,31 @@ const goalStatusBadge = (status: KeyResultStatus) => {
       <main className="flex flex-1 items-start justify-center px-4">
         <div className="w-full py-2 text-center">
           {view === "productivity" && (
-            <div className="mt-6 flex items-center justify-center gap-3 text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
-              <button
-                type="button"
-                onClick={() => shiftSelectedWeek(-1)}
-                className="rounded-full px-3 py-1 text-xs transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
-                aria-label="Previous week"
-              >
-                ←
-              </button>
-              <h1 className="text-lg sm:text-xl font-semibold tracking-wide text-foreground">
+            <div className="mt-6 flex flex-col items-center gap-2 text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => shiftSelectedWeek(-1)}
+                  className="rounded-full px-2 py-1 text-xs transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
+                  aria-label="Previous week"
+                >
+                  ←
+                </button>
+                <span className="text-[10px] uppercase tracking-[0.4em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                  Week of
+                </span>
+                <button
+                  type="button"
+                  onClick={() => shiftSelectedWeek(1)}
+                  className="rounded-full px-2 py-1 text-xs transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
+                  aria-label="Next week"
+                >
+                  →
+                </button>
+              </div>
+              <h1 className="text-base sm:text-lg font-semibold uppercase tracking-[0.3em] text-foreground">
                 {navbarWeekLabel}
               </h1>
-              <button
-                type="button"
-                onClick={() => shiftSelectedWeek(1)}
-                className="rounded-full px-3 py-1 text-xs transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
-                aria-label="Next week"
-              >
-                →
-              </button>
             </div>
           )}
           {view === "life" && (
