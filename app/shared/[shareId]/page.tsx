@@ -53,6 +53,8 @@ type SharePayload = {
       productivityViewMode: "day" | "week";
       productivityScaleMode: "3" | "4";
       showLegend: boolean;
+      autoMarkWeekendsOff: boolean;
+      workDays: string;
     };
     goals: SharedGoal[];
     productivityRatings: Record<string, number | null>;
@@ -139,6 +141,53 @@ export default function SharedPage({
     }
   }, [data, selectedWeekKey, weeksForYear]);
 
+  // Parse workDays to determine weekends - must be before early returns
+  const workDays = useMemo(() => {
+    if (!data?.profile?.workDays) return [0, 1, 2, 3, 4, 5, 6];
+    const parsed = data.profile.workDays
+      .split(',')
+      .map((d: string) => Number(d))
+      .filter((d: number) => d >= 0 && d <= 6) as WeekdayIndex[];
+    return parsed.length > 0 ? parsed : [0, 1, 2, 3, 4, 5, 6];
+  }, [data?.profile?.workDays]);
+
+  // Compute day-offs including auto-marked weekends - must be before early returns
+  const computedDayOffs = useMemo(() => {
+    if (!data?.dayOffs) return {};
+    if (!data?.profile?.autoMarkWeekendsOff) {
+      return data.dayOffs;
+    }
+
+    const result = { ...data.dayOffs };
+
+    // Helper to check if a day is a weekend (not in workDays)
+    const isWeekend = (yearVal: number, monthIndex: number, dayOfMonth: number): boolean => {
+      const date = new Date(yearVal, monthIndex, dayOfMonth);
+      const dayOfWeek = date.getDay() as WeekdayIndex;
+      return !workDays.includes(dayOfWeek);
+    };
+
+    // Add all weekends from the current year range
+    const years = [productivityYear - 1, productivityYear, productivityYear + 1];
+    years.forEach(year => {
+      for (let month = 0; month < 12; month++) {
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+          if (isWeekend(year, month, day)) {
+            const date = new Date(year, month, day);
+            const key = formatDayKey(date);
+            // Only add if not explicitly overridden to false
+            if (result[key] === undefined) {
+              result[key] = true;
+            }
+          }
+        }
+      }
+    });
+
+    return result;
+  }, [data?.dayOffs, data?.profile?.autoMarkWeekendsOff, productivityYear, workDays]);
+
   const selectedWeekEntry = selectedWeekKey ? data?.weeklyNotes[selectedWeekKey] : null;
   const selectedWeek = selectedWeekKey
     ? weeksForYear.find((week) => week.weekKey === selectedWeekKey)
@@ -180,13 +229,13 @@ export default function SharedPage({
   const visibleRatings = showSelfRating ? data.productivityRatings : {};
   const dosDontsPanel = showDosDonts ? (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="flex flex-col gap-2 p-4 dos-card-bg rounded-lg">
+      <div className="flex flex-col gap-2 p-4 dos-card-bg">
         <span className="text-xs uppercase tracking-[0.3em] dos-label-color">Do&apos;s</span>
         <p className="text-[13px] sm:text-sm whitespace-pre-wrap textarea-text-color px-1 py-2 sm:px-2 leading-relaxed">
           {selectedWeekEntry?.dos ?? ""}
         </p>
       </div>
-      <div className="flex flex-col gap-2 p-4 donts-card-bg rounded-lg">
+      <div className="flex flex-col gap-2 p-4 donts-card-bg">
         <span className="text-xs uppercase tracking-[0.3em] donts-label-color">Don&apos;ts</span>
         <p className="text-[13px] sm:text-sm whitespace-pre-wrap textarea-text-color px-1 py-2 sm:px-2 leading-relaxed">
           {selectedWeekEntry?.donts ?? ""}
@@ -204,11 +253,11 @@ export default function SharedPage({
       )}
       <main className="flex flex-1 items-start justify-center px-4">
         <div className="w-full py-6 text-center mb-50">
-          <div className="mb-6 text-sm uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
+          <div className={`mb-6 text-sm uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] ${!showSelfRating && !showDosDonts && !showWeeklyGoals && showOkrs ? 'print-hidden' : ''}`}>
             Shared by {data.owner.personName || data.owner.email || "Account"}
           </div>
           {selectedWeek && (
-            <div className="mb-6 flex items-center justify-center gap-4">
+            <div className={`mb-6 flex items-center justify-center gap-4 ${!showSelfRating && !showDosDonts && !showWeeklyGoals && showOkrs ? 'print-hidden' : ''}`}>
               <button
                 type="button"
                 onClick={() => {
@@ -266,7 +315,7 @@ export default function SharedPage({
                 year={productivityYear}
                 setYear={setProductivityYear}
                 ratings={visibleRatings}
-                dayOffs={data.dayOffs ?? {}}
+                dayOffs={computedDayOffs}
                 scale={scale}
                 mode={productivityMode}
                 showLegend={showSelfRating}

@@ -86,6 +86,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
           productivityViewMode: ownerProfile?.productivityViewMode ?? "week",
           productivityScaleMode: ownerProfile?.productivityScaleMode ?? "3",
           showLegend: ownerProfile?.showLegend ?? true,
+          autoMarkWeekendsOff: ownerProfile?.autoMarkWeekendsOff ?? false,
+          workDays: ownerProfile?.workDays ?? "0,1,2,3,4,5,6",
         },
         goals: share.owner.goals ?? [],
         productivityRatings,
