@@ -4387,7 +4387,7 @@ const ProductivityGrid = ({
                   }}
                   className={`h-4 w-full text-[10px] font-semibold text-transparent transition focus:text-transparent relative ${weekBorderClass} ${
                     isDayOff
-                      ? "bg-[#8dc8e6]"
+                      ? "bg-[#8dc8e659]"
                       : hasValue
                         ? scaleEntry.color
                         : "bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
