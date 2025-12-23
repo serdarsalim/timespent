@@ -2427,7 +2427,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
   }, [selectedWeekEntry?.dos, selectedWeekEntry?.donts]);
   const dosDontsPanel = selectedWeekKey ? (
     <div className="grid gap-4 sm:grid-cols-2">
-      <label className="flex flex-col gap-2 rounded-2xl p-4 dos-card-bg">
+      <label className="flex flex-col gap-2 p-4 dos-card-bg">
         <span className="text-xs uppercase tracking-[0.3em] dos-label-color">
           Do&apos;s
         </span>
@@ -2443,11 +2443,11 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             resizeTextareaToFit(target);
           }}
           placeholder="Behaviors to reinforce"
-          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-[13px] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm textarea-text-color"
+          className="min-h-22 resize-none overflow-hidden border-none bg-transparent p-2 text-[13px] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm textarea-text-color"
           style={{ height: "auto" }}
         />
       </label>
-      <label className="flex flex-col gap-2 rounded-2xl p-4 donts-card-bg">
+      <label className="flex flex-col gap-2 p-4 donts-card-bg">
         <span className="text-xs uppercase tracking-[0.3em] donts-label-color">
           Don&apos;ts
         </span>
@@ -2463,7 +2463,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             resizeTextareaToFit(target);
           }}
           placeholder="Behaviors to avoid"
-          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-[13px] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm textarea-text-color"
+          className="min-h-22 resize-none overflow-hidden border-none bg-transparent p-2 text-[13px] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm textarea-text-color"
           style={{ height: "auto" }}
         />
       </label>
@@ -2979,7 +2979,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   </div>
                 ) : null}
                 <div
-                  className="flex-1 rounded-2xl px-4 pt-4 pb-4 weekly-goals-bg"
+                  className="flex-1 px-4 pt-4 pb-4 weekly-goals-bg"
                   data-print-hidden={printOptions.showWeeklyGoals ? "false" : "true"}
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
@@ -4099,7 +4099,7 @@ const ProductivityGrid = ({
   };
 
   const renderDayGrid = () => (
-    <div className="rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-6">
+    <div className="border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-6">
       <div
         className="grid gap-2 text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]"
         style={{
@@ -4313,7 +4313,7 @@ const ProductivityGrid = ({
 
   const renderWeekGrid = () => {
     return (
-      <div className="rounded-3xl border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-6">
+      <div className="border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] p-6">
         <div
           className="grid gap-2 text-xs text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]"
           style={{
