@@ -4397,7 +4397,7 @@ const ProductivityGrid = ({
                   })}, rating ${scaleEntry.label}`}
                 >
                   {isToday && (
-                    <span className={`absolute right-0.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full ${isTodayInSelectedWeek ? 'today-dot' : ''}`} />
+                    <span className={`absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full ${isTodayInSelectedWeek ? 'today-dot' : ''}`} />
                   )}
                   {hasValue ? currentValue : ""}
                 </button>
@@ -4509,7 +4509,7 @@ const ProductivityGrid = ({
                 const scaleClass =
                   colorIndex !== null && colorIndex !== undefined
                     ? scale[colorIndex].color
-                    : "bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)]";
+                    : "bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]";
                 const isSelectedWeek = selectedWeekKey === week.weekKey;
                 const dayOffCount = week.dayKeys.reduce(
                   (count, dayKey) => count + (dayOffs[dayKey] ? 1 : 0),
@@ -4537,7 +4537,7 @@ const ProductivityGrid = ({
                 const isFirstWeekInMonth = weekIndexInMonth === 0;
                 const isLastWeekInMonth = weekIndexInMonth === monthWeeks.length - 1;
                 // Build selected week border classes
-                const selectedWeekBorderClass = isSelectedWeek ? "border-black" : "";
+                const selectedWeekBorderClass = isSelectedWeek ? "border-2 border-black" : "";
                 return (
                   <div key={`week-card-${week.weekNumber}`}>
                     <button
@@ -4562,7 +4562,7 @@ const ProductivityGrid = ({
                           }
                         }
                       }}
-                      className={`relative flex h-5 w-full items-center justify-center border text-[10px] font-semibold text-transparent transition focus:text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] sm:h-4 ${
+                      className={`relative flex h-5 w-full items-center justify-center border text-[10px] font-semibold text-transparent transition focus:text-[color-mix(in_srgb,var(--foreground)_70%,transparent)] sm:h-5 ${
                         hasDayScores
                           ? "cursor-pointer"
                           : "hover:opacity-90"
@@ -4575,7 +4575,7 @@ const ProductivityGrid = ({
                       }
                     >
                       {isThisWeek && (
-                        <span className={`absolute right-0.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full ${isThisWeekSelected ? 'today-dot' : ''}`} />
+                        <span className={`absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full ${isThisWeekSelected ? 'today-dot' : ''}`} />
                       )}
                       {displayValue}
                     </button>
