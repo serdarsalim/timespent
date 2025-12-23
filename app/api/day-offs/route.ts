@@ -51,7 +51,8 @@ export async function POST(request: NextRequest) {
         await tx.dayOff.createMany({
           data: dayOffs.map((entry: any) => ({
             userId: user.id,
-            dayKey: entry.dayKey
+            dayKey: entry.dayKey,
+            isOff: entry.isOff ?? true
           }))
         })
       }

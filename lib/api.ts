@@ -105,15 +105,13 @@ function transformDayOffsFromDB(entries: any[]): Record<string, boolean> {
     return obj
   }
   for (const entry of entries) {
-    obj[entry.dayKey] = true
+    obj[entry.dayKey] = entry.isOff ?? true
   }
   return obj
 }
 
 function transformDayOffsToDB(obj: Record<string, boolean>): any[] {
-  return Object.entries(obj)
-    .filter(([, value]) => value)
-    .map(([dayKey]) => ({ dayKey }))
+  return Object.entries(obj).map(([dayKey, isOff]) => ({ dayKey, isOff }))
 }
 
 // Transform weekly notes from array to object

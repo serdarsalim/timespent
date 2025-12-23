@@ -1287,7 +1287,10 @@ export default function Home() {
       productivityScaleMode,
       showLegend,
       weeklyGoalsTemplate,
-      dayOffAllowance
+      dayOffAllowance,
+      workDays: workDays.join(','),
+      productivityViewMode: productivityMode,
+      autoMarkWeekendsOff
     };
     const serializedProfile = JSON.stringify(profilePayload);
     if (lastServerSavedProfileRef.current === serializedProfile) {
@@ -1302,7 +1305,7 @@ export default function Home() {
         console.error("Failed to save profile", error);
       }
     })();
-  }, [personName, dateOfBirth, email, weekStartDay, recentYears, goalsSectionTitle, productivityScaleMode, showLegend, weeklyGoalsTemplate, dayOffAllowance, isHydrated, userEmail, isDemoMode]);
+  }, [personName, dateOfBirth, email, weekStartDay, recentYears, goalsSectionTitle, productivityScaleMode, showLegend, weeklyGoalsTemplate, dayOffAllowance, workDays, productivityMode, autoMarkWeekendsOff, isHydrated, userEmail, isDemoMode]);
 
   useEffect(() => {
     try {
@@ -2949,6 +2952,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                           dayOffAllowance,
                           workDays: workDays.join(','),
                           productivityViewMode: newMode,
+                          autoMarkWeekendsOff,
                         });
                       }
                     }}
@@ -3238,6 +3242,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                             dayOffAllowance,
                             workDays: newWorkDays.join(','),
                             productivityViewMode: productivityMode,
+                            autoMarkWeekendsOff,
                           });
                         }
                       }}
@@ -4053,11 +4058,29 @@ const ProductivityGrid = ({
       setDayOffs((prev) => {
         const next = { ...prev };
         const hasRating = ratings[key] !== null && ratings[key] !== undefined;
-        if (next[key]) {
-          delete next[key];
-        } else if (!hasRating) {
+        const isCurrentlyDayOff = isDayOffComputed(key, year, monthIndex, day);
+        const isWeekendDay = isWeekend(year, monthIndex, day);
+
+        // If currently showing as day-off
+        if (isCurrentlyDayOff) {
+          // If manually marked as true, remove the manual marking
+          if (next[key] === true) {
+            delete next[key];
+          }
+          // If it's an auto-weekend with no manual marking, set to false to override
+          else if (autoMarkWeekendsOff && isWeekendDay && next[key] === undefined) {
+            next[key] = false;
+          }
+          // If manually set to false, remove it (clear the override)
+          else if (next[key] === false) {
+            delete next[key];
+          }
+        }
+        // If not currently showing as day-off and no rating, mark it
+        else if (!hasRating) {
           next[key] = true;
         }
+
         return next;
       });
       return;
