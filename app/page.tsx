@@ -81,6 +81,7 @@ const TIME_OPTIONS: string[] = Array.from({ length: 24 * 2 }, (_, index) => {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 });
 
+
 const DEFAULT_ENTRY_START = "09:00";
 const DEFAULT_ENTRY_DURATION_MINUTES = 60;
 
@@ -208,6 +209,17 @@ type Goal = {
   keyResults: KeyResult[];
   statusOverride?: KeyResultStatus;
   archived?: boolean;
+};
+
+const combineGoalsForSave = (activeGoals: Goal[], archivedGoals: Goal[]) => {
+  const combined = [...activeGoals, ...archivedGoals];
+  const unique = new Map<string, Goal>();
+  for (const goal of combined) {
+    if (!unique.has(goal.id)) {
+      unique.set(goal.id, goal);
+    }
+  }
+  return Array.from(unique.values());
 };
 
 type WeeklyNoteEntry = {
@@ -725,7 +737,7 @@ export default function Home() {
       return;
     }
 
-    pendingGoalsRef.current = nextGoals;
+    pendingGoalsRef.current = combineGoalsForSave(nextGoals, archivedGoals);
 
     if (goalsSaveTimeoutRef.current) {
       window.clearTimeout(goalsSaveTimeoutRef.current);
@@ -733,7 +745,7 @@ export default function Home() {
     }
 
     triggerGoalsSave();
-  }, [userEmail, isDemoMode, triggerGoalsSave]);
+  }, [userEmail, isDemoMode, archivedGoals, triggerGoalsSave]);
 
   const triggerProductivitySave = useCallback(() => {
     if (!userEmail || isDemoMode) {
@@ -1466,7 +1478,8 @@ export default function Home() {
   useEffect(() => {
     if (!isHydrated) return;
 
-    const serializedGoals = JSON.stringify(goals);
+    const goalsToSave = combineGoalsForSave(goals, archivedGoals);
+    const serializedGoals = JSON.stringify(goalsToSave);
     if (lastProcessedGoalsRef.current === serializedGoals) {
       return;
     }
@@ -1485,7 +1498,7 @@ export default function Home() {
       return;
     }
 
-    pendingGoalsRef.current = goals;
+    pendingGoalsRef.current = goalsToSave;
 
     if (goalsSaveTimeoutRef.current) {
       window.clearTimeout(goalsSaveTimeoutRef.current);
@@ -1502,7 +1515,7 @@ export default function Home() {
         goalsSaveTimeoutRef.current = null;
       }
     };
-  }, [goals, isHydrated, userEmail, isDemoMode, triggerGoalsSave]);
+  }, [goals, archivedGoals, isHydrated, userEmail, isDemoMode, triggerGoalsSave]);
 
   useEffect(() => {
     if (!isHydrated) return;
