@@ -203,7 +203,7 @@ export default function SharedPage({
         </div>
       )}
       <main className="flex flex-1 items-start justify-center px-4">
-        <div className="w-full py-6 text-center mb-[200px]">
+        <div className="w-full py-6 text-center mb-50">
           <div className="mb-6 text-sm uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)]">
             Shared by {data.owner.personName || data.owner.email || "Account"}
           </div>
@@ -296,7 +296,7 @@ export default function SharedPage({
                   <div className="mb-4 lg:hidden">{dosDontsPanel}</div>
                 ) : null}
                 {showWeeklyGoals ? (
-                  <div className="flex-1 rounded-2xl px-4 pt-4 pb-4" style={{ backgroundColor: "var(--card-muted-bg)" }}>
+                  <div className="flex-1 rounded-2xl px-4 pt-4 pb-4" style={{ backgroundColor: "#f5ede7" }}>
                     <span className="block text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
                       Weekly goals
                     </span>
@@ -321,7 +321,7 @@ export default function SharedPage({
                           quickbars_insert_toolbar: false,
                           content_style: `
                             body {
-                              background-color: #f1e9e5 !important;
+                              background-color: #f5ede7 !important;
                               color: #0f172a !important;
                               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                               font-size: 15px;

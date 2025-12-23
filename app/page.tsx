@@ -2689,7 +2689,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                               onClick={() =>
                                 cycleKeyResultStatus(goal.id, kr.id)
                               }
-                              className={`rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-base sm:text-lg ${goalStatusBadge(
+                              className={`rounded-full px-2 sm:px-2.5 py-0.5 sm:py-0.5 text-base sm:text-lg ${goalStatusBadge(
                                 kr.status
                               )}`}
                               title={kr.status === "started"
@@ -2698,16 +2698,25 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                                   ? "On hold"
                                   : "Completed"}
                             >
-                              {kr.status === "started"
-                              ? "▶️"
-                              : kr.status === "on-hold"
-                                ? "⏸️"
-                                : "✅"}
+                              <span className="sm:hidden">
+                                {kr.status === "started"
+                                ? "▶️"
+                                : kr.status === "on-hold"
+                                  ? "⏸️"
+                                  : "✅"}
+                              </span>
+                              <span className="hidden sm:inline sm:text-sm">
+                                {kr.status === "started"
+                                  ? "Started"
+                                  : kr.status === "on-hold"
+                                    ? "On hold"
+                                    : "Completed"}
+                              </span>
                             </button>
                           )}
                           {isViewingArchived && (
                             <span
-                              className={`rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-base sm:text-lg ${goalStatusBadge(
+                              className={`rounded-full px-2 sm:px-2.5 py-0.5 sm:py-0.5 text-base sm:text-lg ${goalStatusBadge(
                                 kr.status
                               )}`}
                               title={kr.status === "started"
@@ -2716,11 +2725,20 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                                   ? "On hold"
                                   : "Completed"}
                             >
-                              {kr.status === "started"
-                              ? "▶️"
-                              : kr.status === "on-hold"
-                                ? "⏸️"
-                                : "✅"}
+                              <span className="sm:hidden">
+                                {kr.status === "started"
+                                ? "▶️"
+                                : kr.status === "on-hold"
+                                  ? "⏸️"
+                                  : "✅"}
+                              </span>
+                              <span className="hidden sm:inline sm:text-sm">
+                                {kr.status === "started"
+                                  ? "Started"
+                                  : kr.status === "on-hold"
+                                    ? "On hold"
+                                    : "Completed"}
+                              </span>
                             </span>
                           )}
                           {activeGoalCardId === goal.id && !isViewingArchived && (
@@ -2973,7 +2991,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 ) : null}
                 <div
                   className="flex-1 rounded-2xl px-4 pt-4 pb-4"
-                  style={{ backgroundColor: "var(--card-muted-bg)" }}
+                  style={{ backgroundColor: theme === "dark" ? "#0a0a0a" : "#f5ede7" }}
                   data-print-hidden={printOptions.showWeeklyGoals ? "false" : "true"}
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
@@ -3025,8 +3043,8 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                         quickbars_insert_toolbar: false,
                         content_style: `
                           body {
-                            background-color: #f1e9e5 !important;
-                            color: #0f172a !important;
+                            background-color: ${theme === "dark" ? "#0a0a0a" : "#f5ede7"} !important;
+                            color: ${theme === "dark" ? "#f8fafc" : "#0f172a"} !important;
                             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                             font-size: 15px;
                             padding: 10px 10px 10px 22px;
