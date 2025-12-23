@@ -4390,7 +4390,7 @@ const ProductivityGrid = ({
                       ? "bg-[#8dc8e659]"
                       : hasValue
                         ? scaleEntry.color
-                        : "bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
+                        : "bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)]"
                   }`}
                   aria-label={`Day ${dayOfMonth} of ${new Date(2020, monthIndex).toLocaleString(undefined, {
                     month: "long",
@@ -4509,7 +4509,7 @@ const ProductivityGrid = ({
                 const scaleClass =
                   colorIndex !== null && colorIndex !== undefined
                     ? scale[colorIndex].color
-                    : "bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]";
+                    : "bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)]";
                 const isSelectedWeek = selectedWeekKey === week.weekKey;
                 const dayOffCount = week.dayKeys.reduce(
                   (count, dayKey) => count + (dayOffs[dayKey] ? 1 : 0),

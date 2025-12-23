@@ -180,15 +180,15 @@ export default function SharedPage({
   const visibleRatings = showSelfRating ? data.productivityRatings : {};
   const dosDontsPanel = showDosDonts ? (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="flex flex-col gap-2 p-3 dos-card-bg">
+      <div className="flex flex-col gap-2 p-4 dos-card-bg rounded-lg">
         <span className="text-xs uppercase tracking-[0.3em] dos-label-color">Do&apos;s</span>
-        <p className="text-[13px] sm:text-sm whitespace-pre-wrap textarea-text-color">
+        <p className="text-[13px] sm:text-sm whitespace-pre-wrap textarea-text-color px-1 py-2 sm:px-2 leading-relaxed">
           {selectedWeekEntry?.dos ?? ""}
         </p>
       </div>
-      <div className="flex flex-col gap-2 p-3 donts-card-bg">
+      <div className="flex flex-col gap-2 p-4 donts-card-bg rounded-lg">
         <span className="text-xs uppercase tracking-[0.3em] donts-label-color">Don&apos;ts</span>
-        <p className="text-[13px] sm:text-sm whitespace-pre-wrap textarea-text-color">
+        <p className="text-[13px] sm:text-sm whitespace-pre-wrap textarea-text-color px-1 py-2 sm:px-2 leading-relaxed">
           {selectedWeekEntry?.donts ?? ""}
         </p>
       </div>
