@@ -4086,12 +4086,7 @@ const ProductivityGrid = ({
       return;
     }
 
-    // Check if day is marked as day off (manual or auto-weekend)
-    const isCurrentDayOff = isDayOffComputed(key, year, monthIndex, day);
-    if (isCurrentDayOff) {
-      return;
-    }
-
+    // Allow rating even if day is marked as day off
     if (setRatings) {
       setRatings((prev) => {
         const current = prev[key];
@@ -4377,19 +4372,16 @@ const ProductivityGrid = ({
                         // Only allow if within the current scale range
                         if (ratingValue < scale.length) {
                           e.preventDefault();
-                          // Don't allow rating if day is marked as day off (manual or auto-weekend)
-                          if (!isDayOffComputed(key, year, monthIndex, dayOfMonth)) {
-                            setRatings((prev) => ({ ...prev, [key]: ratingValue }));
-                          }
+                          setRatings((prev) => ({ ...prev, [key]: ratingValue }));
                         }
                       }
                     }
                   }}
                   className={`h-4 w-full text-[10px] font-semibold text-transparent transition focus:text-transparent relative ${weekBorderClass} ${
-                    isDayOff
-                      ? "bg-[#8dc8e659]"
-                      : hasValue
-                        ? scaleEntry.color
+                    hasValue
+                      ? scaleEntry.color
+                      : isDayOff
+                        ? "bg-[#8dc8e659]"
                         : "bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)]"
                   }`}
                   aria-label={`Day ${dayOfMonth} of ${new Date(2020, monthIndex).toLocaleString(undefined, {
