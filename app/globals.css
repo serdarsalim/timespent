@@ -154,6 +154,76 @@ body {
   letter-spacing: 0.015em;
 }
 
+/* Weekly goals background */
+.weekly-goals-bg {
+  background-color: #faf7f4;
+}
+
+:root[data-theme="dark"] .weekly-goals-bg {
+  background-color: #0a0a0a;
+}
+
+/* Do's card background */
+.dos-card-bg {
+  background-color: #e8f5e9;
+}
+
+:root[data-theme="dark"] .dos-card-bg {
+  background-color: #1e3a1e;
+}
+
+/* Do's card label color */
+.dos-label-color {
+  color: #0f172a;
+}
+
+:root[data-theme="dark"] .dos-label-color {
+  color: #86efac;
+}
+
+/* Don'ts card background */
+.donts-card-bg {
+  background-color: #ffebee;
+}
+
+:root[data-theme="dark"] .donts-card-bg {
+  background-color: #3a1e1e;
+}
+
+/* Don'ts card label color */
+.donts-label-color {
+  color: #0f172a;
+}
+
+:root[data-theme="dark"] .donts-label-color {
+  color: #fca5a5;
+}
+
+/* Textarea text color */
+.textarea-text-color {
+  color: #0f172a;
+}
+
+:root[data-theme="dark"] .textarea-text-color {
+  color: #f8fafc;
+}
+
+/* Today indicator pulsating dot animation */
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+.today-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
 @media (max-width: 640px) {
   input,
   textarea,

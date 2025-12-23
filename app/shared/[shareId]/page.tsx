@@ -180,15 +180,15 @@ export default function SharedPage({
   const visibleRatings = showSelfRating ? data.productivityRatings : {};
   const dosDontsPanel = showDosDonts ? (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="flex flex-col gap-2 rounded-2xl p-3" style={{ backgroundColor: "#e8f5e9" }}>
-        <span className="text-xs uppercase tracking-[0.3em] text-[#0f172a]">Do&apos;s</span>
-        <p className="text-[13px] text-[#0f172a] sm:text-sm whitespace-pre-wrap">
+      <div className="flex flex-col gap-2 rounded-2xl p-3 dos-card-bg">
+        <span className="text-xs uppercase tracking-[0.3em] dos-label-color">Do&apos;s</span>
+        <p className="text-[13px] sm:text-sm whitespace-pre-wrap textarea-text-color">
           {selectedWeekEntry?.dos ?? ""}
         </p>
       </div>
-      <div className="flex flex-col gap-2 rounded-2xl p-3" style={{ backgroundColor: "#ffebee" }}>
-        <span className="text-xs uppercase tracking-[0.3em] text-[#0f172a]">Don&apos;ts</span>
-        <p className="text-[13px] text-[#0f172a] sm:text-sm whitespace-pre-wrap">
+      <div className="flex flex-col gap-2 rounded-2xl p-3 donts-card-bg">
+        <span className="text-xs uppercase tracking-[0.3em] donts-label-color">Don&apos;ts</span>
+        <p className="text-[13px] sm:text-sm whitespace-pre-wrap textarea-text-color">
           {selectedWeekEntry?.donts ?? ""}
         </p>
       </div>
@@ -225,19 +225,14 @@ export default function SharedPage({
                     }
                   }
                 }}
-                className="rounded-full px-2 py-1 text-xs transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
+                className="rounded-full px-2 py-1 text-sm transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:text-foreground"
                 aria-label="Previous week"
               >
                 ←
               </button>
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.4em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-                  Week of
-                </div>
-                <h1 className="text-base sm:text-lg font-semibold uppercase tracking-[0.3em] text-foreground">
-                  {selectedWeek.rangeLabel}, {selectedWeek.weekStart.getFullYear()}
-                </h1>
-              </div>
+              <h1 className="text-xl sm:text-2xl font-semibold uppercase tracking-[0.3em] text-foreground">
+                {selectedWeek.rangeLabel}, {selectedWeek.weekStart.getFullYear()}
+              </h1>
               <button
                 type="button"
                 onClick={() => {
@@ -254,7 +249,7 @@ export default function SharedPage({
                     }
                   }
                 }}
-                className="rounded-full px-2 py-1 text-xs transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
+                className="rounded-full px-2 py-1 text-sm transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:text-foreground"
                 aria-label="Next week"
               >
                 →
@@ -296,7 +291,7 @@ export default function SharedPage({
                   <div className="mb-4 lg:hidden">{dosDontsPanel}</div>
                 ) : null}
                 {showWeeklyGoals ? (
-                  <div className="flex-1 rounded-2xl px-4 pt-4 pb-4" style={{ backgroundColor: "#f5ede7" }}>
+                  <div className="flex-1 rounded-2xl px-4 pt-4 pb-4 weekly-goals-bg">
                     <span className="block text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
                       Weekly goals
                     </span>
@@ -321,7 +316,7 @@ export default function SharedPage({
                           quickbars_insert_toolbar: false,
                           content_style: `
                             body {
-                              background-color: #f5ede7 !important;
+                              background-color: #faf7f4 !important;
                               color: #0f172a !important;
                               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                               font-size: 15px;

@@ -2427,11 +2427,8 @@ const goalStatusBadge = (status: KeyResultStatus) => {
   }, [selectedWeekEntry?.dos, selectedWeekEntry?.donts]);
   const dosDontsPanel = selectedWeekKey ? (
     <div className="grid gap-4 sm:grid-cols-2">
-      <label
-        className="flex flex-col gap-2 rounded-2xl p-3"
-        style={{ backgroundColor: "#e8f5e9" }}
-      >
-        <span className="text-xs uppercase tracking-[0.3em] text-[#0f172a] dark:text-[#0f172a]">
+      <label className="flex flex-col gap-2 rounded-2xl p-4 dos-card-bg">
+        <span className="text-xs uppercase tracking-[0.3em] dos-label-color">
           Do&apos;s
         </span>
         <textarea
@@ -2446,15 +2443,12 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             resizeTextareaToFit(target);
           }}
           placeholder="Behaviors to reinforce"
-          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-[13px] text-[#0f172a] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm"
+          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-[13px] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm textarea-text-color"
           style={{ height: "auto" }}
         />
       </label>
-      <label
-        className="flex flex-col gap-2 rounded-2xl p-3"
-        style={{ backgroundColor: "#ffebee" }}
-      >
-        <span className="text-xs uppercase tracking-[0.3em] text-[#0f172a] dark:text-[#0f172a]">
+      <label className="flex flex-col gap-2 rounded-2xl p-4 donts-card-bg">
+        <span className="text-xs uppercase tracking-[0.3em] donts-label-color">
           Don&apos;ts
         </span>
         <textarea
@@ -2469,7 +2463,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             resizeTextareaToFit(target);
           }}
           placeholder="Behaviors to avoid"
-          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-[13px] text-[#0f172a] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm"
+          className="min-h-22 resize-none overflow-hidden rounded-2xl border-none bg-transparent p-2 text-[13px] outline-none focus:ring-1 focus:ring-[color-mix(in_srgb,var(--foreground)_30%,transparent)] sm:text-sm textarea-text-color"
           style={{ height: "auto" }}
         />
       </label>
@@ -2885,31 +2879,26 @@ const goalStatusBadge = (status: KeyResultStatus) => {
       <main className="flex flex-1 items-start justify-center pl-6 pr-4">
         <div className="w-full py-2 text-center">
           {view === "productivity" && (
-            <div className="mt-6 flex flex-col items-center gap-2 text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => shiftSelectedWeek(-1)}
-                  className="rounded-full px-2 py-1 text-xs transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
-                  aria-label="Previous week"
-                >
-                  ←
-                </button>
-                <span className="text-[10px] uppercase tracking-[0.4em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-                  Week of
-                </span>
-                <button
-                  type="button"
-                  onClick={() => shiftSelectedWeek(1)}
-                  className="rounded-full px-2 py-1 text-xs transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
-                  aria-label="Next week"
-                >
-                  →
-                </button>
-              </div>
-              <h1 className="text-base sm:text-lg font-semibold uppercase tracking-[0.3em] text-foreground">
+            <div className="mt-6 flex items-center justify-center gap-4">
+              <button
+                type="button"
+                onClick={() => shiftSelectedWeek(-1)}
+                className="rounded-full px-2 py-1 text-sm transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:text-foreground"
+                aria-label="Previous week"
+              >
+                ←
+              </button>
+              <h1 className="text-xl sm:text-2xl font-semibold uppercase tracking-[0.3em] text-foreground">
                 {navbarWeekLabel}
               </h1>
+              <button
+                type="button"
+                onClick={() => shiftSelectedWeek(1)}
+                className="rounded-full px-2 py-1 text-sm transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:text-foreground"
+                aria-label="Next week"
+              >
+                →
+              </button>
             </div>
           )}
           {view === "life" && (
@@ -2929,10 +2918,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   className="space-y-4 order-2 lg:order-1"
                   data-print-hidden={printOptions.showCalendar ? "false" : "true"}
                 >
-                  <div
-                    className="rounded-3xl p-6"
-                    style={{ backgroundColor: theme === "dark" ? "#1a1412" : "#fef8f0" }}
-                  >
                   <ProductivityGrid
                     year={productivityYear}
                     setYear={setProductivityYear}
@@ -2971,7 +2956,6 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                     setSelectedWeekKey={setSelectedWeekKey}
                     weekStartDay={weekStartDay}
                   />
-                  </div>
                   {productivityMode === "week" && dosDontsPanel ? (
                     <div className="mt-4 hidden lg:block">{dosDontsPanel}</div>
                   ) : null}
@@ -2995,8 +2979,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   </div>
                 ) : null}
                 <div
-                  className="flex-1 rounded-2xl px-4 pt-4 pb-4"
-                  style={{ backgroundColor: theme === "dark" ? "#0a0a0a" : "#f5ede7" }}
+                  className="flex-1 rounded-2xl px-4 pt-4 pb-4 weekly-goals-bg"
                   data-print-hidden={printOptions.showWeeklyGoals ? "false" : "true"}
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
@@ -3048,7 +3031,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                         quickbars_insert_toolbar: false,
                         content_style: `
                           body {
-                            background-color: ${theme === "dark" ? "#0a0a0a" : "#f5ede7"} !important;
+                            background-color: ${theme === "dark" ? "#0a0a0a" : "#faf7f4"} !important;
                             color: ${theme === "dark" ? "#f8fafc" : "#0f172a"} !important;
                             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                             font-size: 15px;
@@ -4145,7 +4128,7 @@ const ProductivityGrid = ({
       >
         {hoveredDayDisplay && (
           <div
-            className="pointer-events-none absolute"
+            className="pointer-events-none absolute z-50"
             style={{
               left: hoveredDayDisplay.x,
               top: hoveredDayDisplay.y,
@@ -4217,10 +4200,8 @@ const ProductivityGrid = ({
                 // Check if next day in this month is in same week
                 const nextDayInWeek = dayOfMonth < daysInMonth(year, monthIndex) && currentWeek.dayKeys.includes(`${year}-${monthIndex + 1}-${dayOfMonth + 1}`);
 
-                // Top border: golden if previous day is today, otherwise first day of week (stronger) or between days (visible divider)
-                const borderTop = isPreviousDayToday
-                  ? "border-t-2 border-t-yellow-400"
-                  : isFirstInMonth ? "border-t border-t-gray-400" : "border-t-[0.5px] border-t-gray-300";
+                // Top border: first day of week (stronger) or between days (visible divider)
+                const borderTop = isFirstInMonth ? "border-t border-t-gray-400" : "border-t-[0.5px] border-t-gray-300";
                 // Bottom border: last day of week (stronger) or between days (visible divider)
                 const borderBottom = !nextDayInWeek ? "border-b border-b-gray-400" : "border-b-[0.5px] border-b-gray-300";
                 // Left and right borders: always on for week grouping
@@ -4249,6 +4230,8 @@ const ProductivityGrid = ({
                 }
               }
 
+              const isTodayInSelectedWeek = isToday && currentWeek && selectedWeekKey === currentWeek.weekKey;
+
               return (
                 <button
                   type="button"
@@ -4263,21 +4246,20 @@ const ProductivityGrid = ({
                       setRatings((prev) => ({ ...prev, [key]: null }));
                     }
                   }}
-                  className={`h-4 w-full text-[10px] font-semibold text-transparent transition focus:text-transparent ${weekBorderClass} ${
+                  className={`h-4 w-full text-[10px] font-semibold text-transparent transition focus:text-transparent relative ${weekBorderClass} ${
                     isDayOff
                       ? "bg-[#8dc8e6]"
                       : hasValue
                         ? scaleEntry.color
                         : "bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
-                  } ${
-                    isToday
-                      ? "ring-2 ring-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)]"
-                      : ""
                   }`}
                   aria-label={`Day ${dayOfMonth} of ${new Date(2020, monthIndex).toLocaleString(undefined, {
                     month: "long",
                   })}, rating ${scaleEntry.label}`}
                 >
+                  {isToday && (
+                    <span className={`absolute right-0.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full ${isTodayInSelectedWeek ? 'today-dot' : ''}`} />
+                  )}
                   {hasValue ? currentValue : ""}
                 </button>
               );
