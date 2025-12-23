@@ -4,13 +4,14 @@ import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_COOKIE = "cadencia-admin-auth";
+const ADMIN_HASH_PREFIX = "cadencia-admin";
 const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
 const getAdminHash = () => {
   const password = process.env.ADMIN_PASSWORD;
   if (!password) return null;
   return createHash("sha256")
-    .update(`cadencia-admin:${password}`)
+    .update(`${ADMIN_HASH_PREFIX}:${password}`)
     .digest("hex");
 };
 
@@ -53,7 +54,7 @@ async function handleLogin(formData: FormData) {
     redirect("/admin?error=1");
   }
   const submittedHash = createHash("sha256")
-    .update(`timespent-admin:${password}`)
+    .update(`${ADMIN_HASH_PREFIX}:${password}`)
     .digest("hex");
   if (submittedHash !== adminHash) {
     redirect("/admin?error=1");
@@ -71,8 +72,9 @@ async function handleLogout() {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams?: { error?: string };
+  searchParams?: Promise<{ error?: string }>;
 }) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const adminHash = getAdminHash();
   if (!adminHash) {
     return (
@@ -89,9 +91,6 @@ export default async function AdminPage({
     return (
       <main className="mx-auto w-full max-w-md px-6 py-16 text-left">
         <h1 className="text-2xl font-semibold">Admin</h1>
-        <p className="mt-3 text-sm text-[color-mix(in_srgb,var(--foreground)_70%,transparent)]">
-          Enter the admin password to view user stats.
-        </p>
         <form action={handleLogin} className="mt-6 space-y-3">
           <input
             type="password"
@@ -99,7 +98,7 @@ export default async function AdminPage({
             className="w-full rounded-full border border-[color-mix(in_srgb,var(--foreground)_20%,transparent)] bg-transparent px-4 py-2 text-sm outline-none focus:border-foreground"
             placeholder="Admin password"
           />
-          {searchParams?.error ? (
+          {resolvedSearchParams?.error ? (
             <div className="text-xs text-[#ef4444]">Incorrect password.</div>
           ) : null}
           <button
