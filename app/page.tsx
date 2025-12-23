@@ -3713,6 +3713,9 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             <Link href="/terms" className="transition hover:text-white">
               Terms
             </Link>
+            <Link href="/privacy" className="transition hover:text-white">
+              Privacy
+            </Link>
           </div>
         </div>
       </footer>
