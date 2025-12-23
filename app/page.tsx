@@ -2900,6 +2900,9 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 ←
               </button>
               <h1 className="text-xl sm:text-2xl font-semibold uppercase tracking-[0.3em] text-foreground">
+                <span className="block text-[10px] tracking-[0.5em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
+                  {APP_NAME}
+                </span>
                 {navbarWeekLabel}
               </h1>
               <button
