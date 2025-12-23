@@ -2979,10 +2979,10 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   </div>
                 ) : null}
                 <div
-                  className="flex-1 px-4 pt-4 pb-4 weekly-goals-bg"
+                  className="flex-1 px-0 pt-4 pb-0 weekly-goals-bg sm:px-4 sm:pb-4"
                   data-print-hidden={printOptions.showWeeklyGoals ? "false" : "true"}
                 >
-                  <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="mb-2 flex items-center justify-between gap-3 px-4 sm:px-0">
                     <span className="block text-xs uppercase tracking-[0.3em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
                       Weekly goals
                     </span>
@@ -3035,7 +3035,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                             color: ${theme === "dark" ? "#f8fafc" : "#0f172a"} !important;
                             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                             font-size: 15px;
-                            padding: 10px 10px 10px 22px;
+                            padding: 10px 16px;
                             margin: 0;
                           }
                           .mce-content-body {
