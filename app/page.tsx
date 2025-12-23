@@ -27,6 +27,7 @@ import {
   demoGoals,
   demoWeeklyNoteTemplate,
   demoProfile,
+  demoDayOffs,
 } from "@/lib/demo-data";
 
 type Theme = "light" | "dark";
@@ -1162,7 +1163,10 @@ export default function Home() {
           setRecentYears(demoProfile.recentYears);
           setShowLegend(demoProfile.showLegend ?? true);
           setDayOffAllowance(demoProfile.dayOffAllowance ?? 15);
-          setDayOffs({});
+          setDayOffs(demoDayOffs);
+          setProductivityScaleMode((demoProfile.productivityScaleMode as "3" | "4") ?? "3");
+          setAutoMarkWeekendsOff(demoProfile.autoMarkWeekendsOff ?? false);
+          setWorkDays(demoProfile.workDays ? demoProfile.workDays.split(',').map(Number) as WeekdayIndex[] : [0, 1, 2, 3, 4, 5, 6]);
           setWeeklyGoalsTemplate(
             normalizeWeeklyGoalsTemplate(demoProfile.weeklyGoalsTemplate ?? weeklyGoalsTemplate)
           );
@@ -5756,9 +5760,26 @@ const buildDemoWeeklyNotes = (
   weekStartDay: WeekdayIndex
 ): Record<string, Partial<WeeklyNoteEntry>> => {
   const notes: Record<string, Partial<WeeklyNoteEntry>> = {};
+  const today = new Date();
+
   buildWeeksForYear(year, weekStartDay).forEach((week) => {
-    notes[week.weekKey] = demoWeeklyNoteTemplate;
+    // Check if this week contains today
+    const isCurrentWeek = week.dayKeys.some((dayKey) => {
+      const [y, m, d] = dayKey.split("-").map(Number);
+      const keyDate = new Date(y!, m! - 1, d);
+      return (
+        keyDate.getFullYear() === today.getFullYear() &&
+        keyDate.getMonth() === today.getMonth() &&
+        keyDate.getDate() === today.getDate()
+      );
+    });
+
+    // Only add demo content for the current week
+    if (isCurrentWeek) {
+      notes[week.weekKey] = demoWeeklyNoteTemplate;
+    }
   });
+
   return notes;
 };
 
