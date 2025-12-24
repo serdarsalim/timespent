@@ -2438,7 +2438,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
   }, [selectedWeekEntry?.dos, selectedWeekEntry?.donts, productivityMode]);
   const dosDontsPanel = selectedWeekKey ? (
     <div className="grid gap-4 sm:grid-cols-2">
-      <label className="flex flex-col gap-2 p-4 rounded-md border-2 border-emerald-300 dark:border-emerald-700 bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] transition hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]">
+      <label className="flex flex-col gap-2 p-4 rounded-md border border-emerald-200 dark:border-emerald-800 bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] transition hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]">
         <span className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">
           Do&apos;s
         </span>
@@ -2458,7 +2458,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
           style={{ height: "auto" }}
         />
       </label>
-      <label className="flex flex-col gap-2 p-4 rounded-md border-2 border-rose-300 dark:border-rose-700 bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] transition hover:border-rose-400 dark:hover:border-rose-600 hover:bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]">
+      <label className="flex flex-col gap-2 p-4 rounded-md border border-rose-200 dark:border-rose-800 bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)] transition hover:border-rose-300 dark:hover:border-rose-700 hover:bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]">
         <span className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-600 dark:text-rose-400">
           Don&apos;ts
         </span>
@@ -2704,11 +2704,19 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                                   : "Completed"}
                             >
                               <span className="sm:hidden">
-                                {kr.status === "started"
-                                ? "▶️"
-                                : kr.status === "on-hold"
-                                  ? "⏸️"
-                                  : "✅"}
+                                {kr.status === "started" ? (
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                ) : kr.status === "on-hold" ? (
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
                               </span>
                               <span className="hidden sm:inline sm:text-sm">
                                 {kr.status === "started"
@@ -2731,11 +2739,19 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                                   : "Completed"}
                             >
                               <span className="sm:hidden">
-                                {kr.status === "started"
-                                ? "▶️"
-                                : kr.status === "on-hold"
-                                  ? "⏸️"
-                                  : "✅"}
+                                {kr.status === "started" ? (
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                ) : kr.status === "on-hold" ? (
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
                               </span>
                               <span className="hidden sm:inline sm:text-sm">
                                 {kr.status === "started"
@@ -2829,9 +2845,18 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                   fetchArchivedGoals();
                 }
               }}
-              className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-5 py-2 text-xs uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-foreground"
+              className="rounded-full border border-[color-mix(in_srgb,var(--foreground)_30%,transparent)] px-4 py-2 text-[color-mix(in_srgb,var(--foreground)_80%,transparent)] transition hover:border-foreground"
+              title={isViewingArchived ? 'Back to Active' : 'View Archived'}
             >
-              {isViewingArchived ? 'Back to Active' : 'Archived'}
+              {isViewingArchived ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+              )}
             </button>
           </>
         ) : (

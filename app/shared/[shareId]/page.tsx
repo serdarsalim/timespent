@@ -229,13 +229,13 @@ export default function SharedPage({
   const visibleRatings = showSelfRating ? data.productivityRatings : {};
   const dosDontsPanel = showDosDonts ? (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="flex flex-col gap-2 p-4 rounded-md border-2 border-emerald-300 dark:border-emerald-700 bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)]">
+      <div className="flex flex-col gap-2 p-4 rounded-md border border-emerald-200 dark:border-emerald-800 bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)]">
         <span className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">Do&apos;s</span>
         <p className="text-[13px] sm:text-sm whitespace-pre-wrap text-foreground px-1 py-2 sm:px-2 leading-relaxed">
           {selectedWeekEntry?.dos ?? ""}
         </p>
       </div>
-      <div className="flex flex-col gap-2 p-4 rounded-md border-2 border-rose-300 dark:border-rose-700 bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)]">
+      <div className="flex flex-col gap-2 p-4 rounded-md border border-rose-200 dark:border-rose-800 bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)]">
         <span className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-600 dark:text-rose-400">Don&apos;ts</span>
         <p className="text-[13px] sm:text-sm whitespace-pre-wrap text-foreground px-1 py-2 sm:px-2 leading-relaxed">
           {selectedWeekEntry?.donts ?? ""}
