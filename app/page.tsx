@@ -2883,36 +2883,48 @@ const goalStatusBadge = (status: KeyResultStatus) => {
   return (
     <div className="app-shell flex min-h-screen flex-col text-foreground transition-colors">
       {!userEmail && isHydrated ? (
-        <div className="flex justify-end pl-6 pr-4 pt-4">
+        <div className="flex justify-end px-6 pt-3">
           <UserInfo />
         </div>
       ) : null}
       <main className="flex flex-1 items-start justify-center pl-6 pr-4">
         <div className="w-full py-2 text-center">
           {view === "productivity" && (
-            <div className="mt-6 flex items-center justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => shiftSelectedWeek(-1)}
-                className="rounded-full px-2 py-1 text-sm transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:text-foreground"
-                aria-label="Previous week"
-              >
-                ←
-              </button>
-              <h1 className="text-xl sm:text-2xl font-semibold uppercase tracking-[0.3em] text-foreground">
-                <span className="block text-[10px] tracking-[0.5em] text-[color-mix(in_srgb,var(--foreground)_55%,transparent)]">
-                  {APP_NAME}
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2">
+                <img
+                  src="/cadencia-app-logo.png"
+                  alt="Cadencia"
+                  className="h-5 sm:h-6"
+                />
+                <span
+                  className="text-base sm:text-lg text-foreground font-montserrat"
+                  style={{ fontWeight: 600 }}
+                >
+                  Cadencia
                 </span>
-                {navbarWeekLabel}
-              </h1>
-              <button
-                type="button"
-                onClick={() => shiftSelectedWeek(1)}
-                className="rounded-full px-2 py-1 text-sm transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:text-foreground"
-                aria-label="Next week"
-              >
-                →
-              </button>
+              </div>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => shiftSelectedWeek(-1)}
+                  className="rounded-full px-2 py-1 text-sm transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:text-foreground"
+                  aria-label="Previous week"
+                >
+                  ←
+                </button>
+                <h1 className="text-xl sm:text-2xl font-semibold uppercase tracking-[0.3em] text-foreground">
+                  {navbarWeekLabel}
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => shiftSelectedWeek(1)}
+                  className="rounded-full px-2 py-1 text-sm transition hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[color-mix(in_srgb,var(--foreground)_60%,transparent)] hover:text-foreground"
+                  aria-label="Next week"
+                >
+                  →
+                </button>
+              </div>
             </div>
           )}
           {view === "life" && (
@@ -3646,12 +3658,11 @@ const goalStatusBadge = (status: KeyResultStatus) => {
       <footer className="mt-24 bg-slate-900 text-white px-6 md:px-24 py-8 text-sm print-hidden">
         <div className="flex flex-col items-center gap-8 text-center">
           <div className="order-2 flex flex-1 justify-center text-center">
-            <div>
-              <p className="text-base font-medium text-white">© {new Date().getFullYear()} {APP_NAME}</p>
-              <p className="text-xs text-white/70">
-                Personal goal and productivity tracker
-              </p>
-            </div>
+            <img
+              src="/cadenciaslogan.png"
+              alt="Cadencia - Achieve your goals"
+              className="h-24 mx-auto"
+            />
           </div>
 
           <div className="order-1 flex justify-center">
@@ -3719,6 +3730,10 @@ const goalStatusBadge = (status: KeyResultStatus) => {
             <Link href="/privacy" className="transition hover:text-white">
               Privacy
             </Link>
+          </div>
+
+          <div className="order-4 text-[10px] text-white/50">
+            © {new Date().getFullYear()} All rights reserved
           </div>
         </div>
       </footer>
