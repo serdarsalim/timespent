@@ -2718,12 +2718,20 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                                   </svg>
                                 )}
                               </span>
-                              <span className="hidden sm:inline sm:text-sm">
-                                {kr.status === "started"
-                                  ? "Started"
-                                  : kr.status === "on-hold"
-                                    ? "On hold"
-                                    : "Completed"}
+                              <span className="hidden sm:inline">
+                                {kr.status === "started" ? (
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                ) : kr.status === "on-hold" ? (
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
                               </span>
                             </button>
                           )}
@@ -2753,12 +2761,20 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                                   </svg>
                                 )}
                               </span>
-                              <span className="hidden sm:inline sm:text-sm">
-                                {kr.status === "started"
-                                  ? "Started"
-                                  : kr.status === "on-hold"
-                                    ? "On hold"
-                                    : "Completed"}
+                              <span className="hidden sm:inline">
+                                {kr.status === "started" ? (
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                ) : kr.status === "on-hold" ? (
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
                               </span>
                             </span>
                           )}
