@@ -236,6 +236,15 @@ body {
   color: #d1d5db;
 }
 
+/* Heading text color for main headings on dark background */
+.heading-text-color {
+  color: var(--foreground);
+}
+
+:root[data-theme="dark"] .heading-text-color {
+  color: #d1d5db;
+}
+
 /* Today indicator pulsating dot animation */
 @keyframes pulse-dot {
   0%, 100% {

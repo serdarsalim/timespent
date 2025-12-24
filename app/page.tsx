@@ -2524,12 +2524,12 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 }
               }}
               autoFocus
-              className="w-full border-b border-foreground bg-transparent text-center text-2xl sm:text-3xl font-bold text-foreground outline-none"
+              className="w-full border-b border-foreground bg-transparent text-center text-2xl sm:text-3xl font-bold heading-text-color outline-none"
             />
           ) : (
             <h2
               onClick={() => setIsEditingGoalsSectionTitle(true)}
-              className="text-2xl sm:text-3xl font-bold text-foreground cursor-pointer transition hover:opacity-70"
+              className="text-2xl sm:text-3xl font-bold heading-text-color cursor-pointer transition hover:opacity-70"
             >
               {goalsSectionTitle}
             </h2>
@@ -2954,7 +2954,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
                 >
                   ←
                 </button>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                <h1 className="text-2xl sm:text-3xl font-bold heading-text-color">
                   {navbarWeekLabel}
                 </h1>
                 <button
