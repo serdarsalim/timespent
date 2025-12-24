@@ -4447,7 +4447,7 @@ const ProductivityGrid = ({
                     hasValue
                       ? scaleEntry.color
                       : isDayOff
-                        ? "bg-[#8dc8e659]"
+                        ? "day-off-bg"
                         : "bg-[color-mix(in_srgb,var(--foreground)_2%,transparent)]"
                   }`}
                   aria-label={`Day ${dayOfMonth} of ${new Date(2020, monthIndex).toLocaleString(undefined, {
@@ -4575,7 +4575,7 @@ const ProductivityGrid = ({
                 );
                 const isFullWeekOff = dayOffCount === week.dayKeys.length;
                 const hasAnyDayOff = dayOffCount > 0;
-                const weekFillClass = isFullWeekOff ? "bg-[#8dc8e6]" : scaleClass;
+                const weekFillClass = isFullWeekOff ? "day-off-bg" : scaleClass;
                 const showPartialDayOff = !isFullWeekOff && hasAnyDayOff;
                 // Check if this week contains today
                 const today = new Date();

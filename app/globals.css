@@ -82,18 +82,28 @@ body {
   background-color: #38b000 !important;
 }
 
+/* Day off color for light mode */
+.day-off-bg {
+  background-color: #8dc8e659 !important;
+}
+
 /* Productivity colors for dark mode */
 :root[data-theme="dark"] .productivity-low {
-  background-color: #3f3f46 !important;
+  background-color: #ffebee !important;
 }
 :root[data-theme="dark"] .productivity-medium {
-  background-color: #4a8a4d !important;
+  background-color: #b3df8f !important;
 }
 :root[data-theme="dark"] .productivity-high {
-  background-color: #10b981 !important;
+  background-color: #84c400 !important;
 }
 :root[data-theme="dark"] .productivity-top {
-  background-color: #22c55e !important;
+  background-color: #38b000 !important;
+}
+
+/* Day off color for dark mode */
+:root[data-theme="dark"] .day-off-bg {
+  background-color: #2c7aa259 !important;
 }
 
 /* Day grid border colors for dark mode */
