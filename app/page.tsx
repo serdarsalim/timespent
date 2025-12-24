@@ -2435,7 +2435,7 @@ const goalStatusBadge = (status: KeyResultStatus) => {
   useEffect(() => {
     resizeTextareaToFit(dosTextareaRef.current);
     resizeTextareaToFit(dontsTextareaRef.current);
-  }, [selectedWeekEntry?.dos, selectedWeekEntry?.donts]);
+  }, [selectedWeekEntry?.dos, selectedWeekEntry?.donts, productivityMode]);
   const dosDontsPanel = selectedWeekKey ? (
     <div className="grid gap-4 sm:grid-cols-2">
       <label className="flex flex-col gap-2 p-4 dos-card-bg">
